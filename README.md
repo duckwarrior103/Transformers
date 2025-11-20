@@ -6,6 +6,7 @@ Includes implementation of Transformers and with various attention variants, wit
 - An experiment on sorting sequence of integers with length n and vocab size v.
 
 ## To be added soon: 
-- Other attention variants
 - Multi-head attention
-- Custom implemented light-weight auto-regressive model 
+- Multiple Transformer blocks
+- Experimentation with other tasks
+- Transformers with other novel types of attention mechanisms
