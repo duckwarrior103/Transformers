@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
 class SortingDataset(Dataset):
-    def __init__(self, num_samples=10000, seq_length=10, max_value=100):
+    def __init__(self, num_samples=10000, seq_length=10, max_value=50):
         self.num_samples = num_samples
         self.seq_length = seq_length
         self.max_value = max_value
@@ -19,9 +19,3 @@ class SortingDataset(Dataset):
         
         return sequence, target
 
-
-'''
-# Create dataset
-train_dataset = SortingDataset(num_samples=50000, seq_length=10, max_value=100)
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-'''

@@ -2,18 +2,13 @@ import torch.nn as nn
 from models.components.attention.vanilla_self_attention import VanillaSelfAttention
 from models.components.attention.neural_net.ffn import FFN
 
+
 class Block(nn.Module):
     def __init__(self, config):
         super().__init__()
-
-        # Layer normalisation 
         self.ln1 = nn.LayerNorm(config.d_model)
         self.ln2 = nn.LayerNorm(config.d_model)
-
-        # Multi-headed, causal self-attention layer
         self.attn = VanillaSelfAttention(config)
-
-        # Multi-layer Perceptron, a two layer fully-connected neural net
         self.mlp = FFN(config)
 
     def forward(self, x):

@@ -8,25 +8,25 @@ class Config:
     def __init__(self, **kwargs):
         # core model sizes
         self.d_model = kwargs.pop("d_model", 512)
-        # keep both names since some modules expect `embedding_dim` and others `d_model`
-        self.embedding_dim = kwargs.pop("embedding_dim", self.d_model)
-
         self.num_heads = kwargs.pop("num_heads", 8)
-        self.d_ff = kwargs.pop("d_ff", 2048)  # hidden dim in feed-forward
+        self.d_ff = kwargs.pop("d_ff", 2048)
         self.num_layers = kwargs.pop("num_layers", 6)
 
-        # runtime / tokenization
-        self.vocab_size = kwargs.pop("vocab_size", 30522)
+        # attention dimensions
+        self.d_k = kwargs.pop("d_k", self.d_model // self.num_heads)
+        self.d_v = kwargs.pop("d_v", self.d_model // self.num_heads)
+
+        # tokenization
+        self.vocab_size = kwargs.pop("vocab_size", 50)
         self.max_seq_length = kwargs.pop("max_seq_length", 512)
         self.pad_token_id = kwargs.pop("pad_token_id", 0)
 
-        # regularisation / misc
+        # regularization
         self.dropout = kwargs.pop("dropout", 0.1)
         self.attn_dropout = kwargs.pop("attn_dropout", self.dropout)
         self.device = kwargs.pop("device", "cpu")
 
-        # derived values / sanity checks
-        assert self.embedding_dim == self.d_model, "embedding_dim must equal d_model"
+        # derived values
         assert self.d_model % self.num_heads == 0, "d_model must be divisible by num_heads"
         self.head_dim = self.d_model // self.num_heads
 
