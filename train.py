@@ -222,7 +222,7 @@ def sample_inference(trainer, num_samples=5, seq_length=3):
 
 def main():
     # Configuration parameters
-    seq_length = 5  # Default sequence length for training
+    seq_length = 8  # Default sequence length for training
     
     # Check for command-line arguments
     if len(sys.argv) > 1:
