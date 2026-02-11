@@ -32,7 +32,7 @@ class TransformerTrainer:
         num_batches = len(train_loader)
 
         for batch_idx, (sequences, targets) in enumerate(train_loader):
-            sequences, targets = sequences.to(self.config.device), targets.to(self.config.device)
+            sequences, targets = sequences.to(self.config.device, non_blocking=True), targets.to(self.config.device, non_blocking=True)
 
             self.optimizer.zero_grad()
             logits = self.model(sequences)  # (batch_size, seq_length, vocab_size)
@@ -61,7 +61,7 @@ class TransformerTrainer:
 
         with torch.no_grad():
             for sequences, targets in test_loader:
-                sequences, targets = sequences.to(self.config.device), targets.to(self.config.device)
+                sequences, targets = sequences.to(self.config.device, non_blocking=True), targets.to(self.config.device, non_blocking=True)
                 logits = self.model(sequences)
 
                 loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
@@ -160,7 +160,7 @@ def batch_test_model(trainer, test_loader, test_size=1000):
 
     with torch.no_grad():
         for sequences, targets in test_loader:
-            sequences, targets = sequences.to(trainer.config.device), targets.to(trainer.config.device)
+            sequences, targets = sequences.to(trainer.config.device, non_blocking=True), targets.to(trainer.config.device, non_blocking=True)
             logits = trainer.model(sequences)
             predictions = logits.argmax(dim=-1)
 
@@ -221,6 +221,17 @@ def sample_inference(trainer, num_samples=5, seq_length=3):
 
 
 def main():
+    import torch
+
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    print(f"Using device: {device}")
+
     # Configuration parameters
     seq_length = 8  # Default sequence length for training
     
@@ -257,7 +268,7 @@ def main():
                 pad_token_id=0,
                 dropout=0.1,
                 attn_dropout=0.1,
-                device="mps" if torch.backends.mps.is_available() else "cpu"
+                device=device
             )
             
             trainer = TransformerTrainer(config)
@@ -301,18 +312,42 @@ def main():
         pad_token_id=0,
         dropout=0.1,
         attn_dropout=0.1,
-        device="mps" if torch.backends.mps.is_available() else "cpu"
+        device=device
     )
 
     # Dataset
-    train_dataset = SortingDataset(num_samples=50000, seq_length=seq_length, max_value=50)
-    val_dataset = SortingDataset(num_samples=10000, seq_length=seq_length, max_value=50)
-    test_dataset = SortingDataset(num_samples=10000, seq_length=seq_length, max_value=50)
+    train_dataset = SortingDataset(num_samples=1000000, seq_length=seq_length, max_value=50)
+    val_dataset = SortingDataset(num_samples=500000, seq_length=seq_length, max_value=50)
+    test_dataset = SortingDataset(num_samples=500000, seq_length=seq_length, max_value=50)
 
-    batch_size = 32
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    batch_size = 1024
+
+    num_workers = 4
+
+    # Optimized DataLoaders
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=batch_size, 
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=(device.type == "cuda")  # Only pin memory if using a real GPU (CUDA)
+    )
+
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=batch_size, 
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=(device.type == "cuda")
+    )
+
+    test_loader = DataLoader(
+        test_dataset, 
+        batch_size=batch_size, 
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=(device.type == "cuda")
+    )
 
     save_dir = Path("saved_models")
     save_dir.mkdir(exist_ok=True)
@@ -320,7 +355,7 @@ def main():
 
     # Train
     print(f"Starting training with sequence length={seq_length}...")
-    trainer = TransformerTrainer(config, learning_rate=5e-4)
+    trainer = TransformerTrainer(config, learning_rate=1e-3)
     trainer.train_model(train_loader, val_loader, epochs=5, verbose=True)
 
     # Test
