@@ -42,4 +42,4 @@ Thumbs.db
 # Model checkpoints
 saved_models/
 *.pt
-*.pth
+*.pth.venv/
