@@ -43,3 +43,4 @@ Thumbs.db
 saved_models/
 *.pt
 *.pth.venv/
+.venv/
