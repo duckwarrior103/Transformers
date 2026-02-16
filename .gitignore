@@ -44,3 +44,4 @@ saved_models/
 *.pt
 *.pth.venv/
 .venv/
+*.out

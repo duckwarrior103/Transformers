@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#SBATCH --partition=gpuA
+#SBATCH --gpus=1
+#SBATCH -c 4
+#SBATCH --ntasks=1
+#SBATCH --time=1-0
+#SBATCH --output=sweep_seq_%j.out
+
+set -e
+
+module load apps/binapps/conda/miniforge3/25.9.1
+module load libs/cuda/12.4.1
+module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
+source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
+
+BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
+RESULTS_DIR="$BASE/results/sweep-seq-length"
+mkdir -p "$RESULTS_DIR"
+
+for SEQ in 2 4 8 16 32 64 128 256 512 1024; do
+    echo "===== seq_length=$SEQ ====="
+    python -u "$BASE/vibe.py" \
+        --seq_length $SEQ \
+        --max_value 1024 \
+        --train_examples 50000 \
+        --val_examples 5000 \
+        --batch_size 256 \
+        --epochs 8 \
+        --lr 0.0003 \
+        --hidden_size 512 \
+        --num_layers 6 \
+        --num_heads 8 \
+        --results_file "$RESULTS_DIR/seq_${SEQ}.csv"
+    echo "===== Finished seq_length=$SEQ ====="
+done
+
+echo "All sequence length sweeps completed."

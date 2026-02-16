@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# SBATCH directives
+#SBATCH --partition=gpuA
+#SBATCH --gpus=1
+#SBATCH -c 4
+#SBATCH --ntasks=1
+#SBATCH --time=1-0
+#SBATCH --output=experiment_%j.out  # Capture output to a file named with job ID
+
+# Exit on error
+set -e
+
+echo "Starting experiment job..."
+
+# Load modules
+module load apps/binapps/conda/miniforge3/25.9.1
+module load libs/cuda/12.4.1
+module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
+
+# Activate venv
+echo "Activating virtual environment."
+source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
+
+echo "Running vibe.py"
+
+# Run the experiment with initial params (seq_length=256, vocab_size=4096)
+# Maximum: sequence length 1024, vocab_size = 4096
+# Tweak these flags as needed
+# CUDA_LAUNCH_BLOCKING=1 \
+python /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/vibe.py \
+  --seq_length 256 \
+  --max_value 256 \
+  --train_examples 500000 \
+  --val_examples 50000 \
+  --batch_size 512 \
+  --epochs 8 \
+  --lr 0.0003 \
+  --hidden_size 512 \
+  --num_layers 6 \
+  --num_heads 8
+
+echo "Job completed."
