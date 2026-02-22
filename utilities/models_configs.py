@@ -3,6 +3,12 @@ from fla.models import LinearAttentionConfig
 from fla.models import RetNetConfig
 from fla.models import TransformerConfig
 
+# Importing model classes
+from fla.models import TransformerForCausalLM  
+from fla.models import GLAForCausalLM  
+from fla.models import RetNetForCausalLM  
+from fla.models import LinearAttentionForCausalLM
+
 # Config for standard attention model (e.g. FlashAttention2)
 
 def get_standard_config(vocab_size, seq_length):  
@@ -63,6 +69,7 @@ def get_gla_config(vocab_size, seq_length):
     )
 
 def get_retnet_config(vocab_size, seq_length):  
+
     return RetNetConfig(  
         vocab_size=vocab_size,  
         hidden_size=512,  
@@ -80,3 +87,13 @@ def get_retnet_config(vocab_size, seq_length):
         fuse_cross_entropy=True,  
         fuse_linear_cross_entropy=False,  
     )
+
+
+def get_models_creator_dict():
+    return {
+        "standard": (get_standard_config, TransformerForCausalLM),
+        "linear_attention": (get_linear_attention_config, LinearAttentionForCausalLM),
+        "gla": (get_gla_config, GLAForCausalLM),
+        "retnet": (get_retnet_config, RetNetForCausalLM ),
+    }
+

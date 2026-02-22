@@ -22,7 +22,7 @@ srun \
     source .venv/bin/activate
 
     echo 'Starting fresh SSH agent...'
-    eval \"\$(ssh-agent -s)\"
+    eval "$(ssh-agent -s)"
 
     echo 'Adding SSH key...'
     ssh-add ~/.ssh/id_ed25519

@@ -11,6 +11,7 @@ import time
 import csv
 import os
 from utilities.models_configs import get_standard_config, get_linear_attention_config, get_gla_config
+from utilities.models_configs import get_models_creator_dict
 
 # ============================================================================
 # Device
@@ -25,7 +26,9 @@ print()
 # Argument Parsing
 # ============================================================================
 parser = argparse.ArgumentParser(description="Train a transformer for sorting task.")
+parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet"], help="Type of model to train")
 parser.add_argument("--seq_length", type=int, default=1024)
+parser.add_argument("--vocab_size", type=int, default=4098, help="Optional explicit vocabulary size. If set, overrides derived vocab size; must be > max_value+1")
 parser.add_argument("--max_value", type=int, default=4096)
 parser.add_argument("--train_examples", type=int, default=50000)
 parser.add_argument("--val_examples", type=int, default=20000)
@@ -41,7 +44,8 @@ args = parser.parse_args()
 
 MAX_VALUE = args.max_value
 EOS_TOKEN = MAX_VALUE + 1
-VOCAB_SIZE = EOS_TOKEN + 1
+assert args.vocab_size > MAX_VALUE + 1, "Vocab size must be greater than max_value + 1 to accommodate all tokens including EOS."
+VOCAB_SIZE = args.vocab_size
 
 SEQUENCE_LENGTH = args.seq_length
 TRAIN_EXAMPLES = args.train_examples
@@ -50,6 +54,8 @@ BATCH_SIZE = args.batch_size
 EPOCHS = args.epochs
 LEARNING_RATE = args.lr
 WEIGHT_DECAY = args.weight_decay
+
+MODEL_TYPE = args.model_type
 
 print(f"Config: seq_length={SEQUENCE_LENGTH}, vocab_size={VOCAB_SIZE}, "
       f"train_examples={TRAIN_EXAMPLES}, epochs={EPOCHS}, lr={LEARNING_RATE}, "
@@ -115,7 +121,10 @@ val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_w
 # ============================================================================
 # Model
 # ============================================================================
-model = TransformerForCausalLM(get_standard_config(VOCAB_SIZE, SEQUENCE_LENGTH))
+
+model_creator_dict = get_models_creator_dict()
+model_config, model_class = model_creator_dict[MODEL_TYPE]
+model = model_class(model_config(VOCAB_SIZE, SEQUENCE_LENGTH))
 model = model.to(device=device, dtype=torch.bfloat16)
 
 num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
