@@ -1,0 +1,24 @@
+#!/usr/bin/env bash  
+
+# Load Modules
+echo 'Loading Modules...'
+module load apps/binapps/conda/miniforge3/25.9.1
+module load libs/cuda/12.4.1
+module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
+
+# Activate Virtual Environment
+echo 'Activating virtual environment...'
+source .venv/bin/activate
+
+# Set up SSH Key for GitHub
+echo 'Starting fresh SSH agent...'
+eval "$(ssh-agent -s)"
+
+echo 'Adding SSH key...'
+ssh-add ~/.ssh/id_ed25519
+
+echo 'Testing GitHub SSH connection...'
+ssh -T git@github.com
+
+# WE ARE READY
+echo 'Interactive session ready.'
