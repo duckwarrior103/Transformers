@@ -1,5 +1,7 @@
 #!/usr/bin/env bash  
 
+# Run like this: source start_session
+
 # Load Modules
 echo 'Loading Modules...'
 module load apps/binapps/conda/miniforge3/25.9.1
