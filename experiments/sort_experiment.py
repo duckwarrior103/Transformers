@@ -10,7 +10,6 @@ import argparse
 import time
 import csv
 import os
-from utilities.models_configs import get_standard_config, get_linear_attention_config, get_gla_config
 from utilities.models_configs import get_models_creator_dict
 
 # ============================================================================
@@ -26,9 +25,8 @@ print()
 # Argument Parsing
 # ============================================================================
 parser = argparse.ArgumentParser(description="Train a transformer for sorting task.")
-parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet"], help="Type of model to train")
+parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet"], help="Type of model to train")
 parser.add_argument("--seq_length", type=int, default=1024)
-parser.add_argument("--vocab_size", type=int, default=4098, help="Optional explicit vocabulary size. If set, overrides derived vocab size; must be > max_value+1")
 parser.add_argument("--max_value", type=int, default=4096)
 parser.add_argument("--train_examples", type=int, default=50000)
 parser.add_argument("--val_examples", type=int, default=20000)
@@ -44,8 +42,7 @@ args = parser.parse_args()
 
 MAX_VALUE = args.max_value
 EOS_TOKEN = MAX_VALUE + 1
-assert args.vocab_size > MAX_VALUE + 1, "Vocab size must be greater than max_value + 1 to accommodate all tokens including EOS."
-VOCAB_SIZE = args.vocab_size
+VOCAB_SIZE = EOS_TOKEN + 1
 
 SEQUENCE_LENGTH = args.seq_length
 TRAIN_EXAMPLES = args.train_examples
@@ -69,7 +66,7 @@ def init_csv(filepath):
     with open(filepath, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "epoch", "train_loss", "val_loss", "token_acc", "exact_acc",
+            "epoch", "model_type", "train_loss", "val_loss", "token_acc", "exact_acc",
             "epoch_time", "seq_length", "vocab_size", "train_examples",
             "hidden_size", "num_layers", "num_heads", "lr", "batch_size"
         ])
@@ -80,7 +77,7 @@ def log_epoch(filepath, epoch, train_loss, val_loss, token_acc, exact_acc, epoch
     with open(filepath, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
-            epoch, f"{train_loss:.6f}", f"{val_loss:.6f}",
+            epoch, MODEL_TYPE, f"{train_loss:.6f}", f"{val_loss:.6f}",
             f"{token_acc:.6f}", f"{exact_acc:.6f}", f"{epoch_time:.2f}",
             SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_EXAMPLES,
             args.hidden_size, args.num_layers, args.num_heads,

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --partition=gpuA
-#SBATCH --gpus=1
-#SBATCH -c 4
+#SBATCH --gpus=2
+#SBATCH -c 8
 #SBATCH --ntasks=1
 #SBATCH --time=1-0
 #SBATCH --output=sweep_seq_%j.out
@@ -18,9 +18,13 @@ BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
 RESULTS_DIR="$BASE/results/sweep-seq-length"
 mkdir -p "$RESULTS_DIR"
 
+JOB_IDX=0
+declare -a BATCH_PIDS=()
+
 for SEQ in 2 4 8 16 32 64 128 256 512 1024; do
-    echo "===== seq_length=$SEQ ====="
-    python -u "$BASE/vibe.py" \
+    GPU_ID=$(( JOB_IDX % 2 ))
+    echo "===== seq_length=$SEQ (gpu=$GPU_ID) ====="
+    CUDA_VISIBLE_DEVICES=$GPU_ID python -u "$BASE/experiments/sort_experiment.py" \
         --seq_length $SEQ \
         --max_value 1024 \
         --train_examples 50000 \
@@ -31,8 +35,16 @@ for SEQ in 2 4 8 16 32 64 128 256 512 1024; do
         --hidden_size 512 \
         --num_layers 6 \
         --num_heads 8 \
-        --results_file "$RESULTS_DIR/seq_${SEQ}.csv"
-    echo "===== Finished seq_length=$SEQ ====="
+        --results_file "$RESULTS_DIR/seq_${SEQ}.csv" &
+    BATCH_PIDS+=($!)
+    JOB_IDX=$(( JOB_IDX + 1 ))
+
+    if [ ${#BATCH_PIDS[@]} -ge 2 ]; then
+        for pid in "${BATCH_PIDS[@]}"; do wait "$pid" || true; done
+        BATCH_PIDS=()
+    fi
 done
+
+for pid in "${BATCH_PIDS[@]}"; do wait "$pid" || true; done
 
 echo "All sequence length sweeps completed."

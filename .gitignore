@@ -45,3 +45,7 @@ saved_models/
 *.pth.venv/
 .venv/
 *.out
+
+# Experiment Results 
+*.png
+*.csv

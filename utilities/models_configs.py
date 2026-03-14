@@ -2,12 +2,33 @@ from fla.models import GLAConfig
 from fla.models import LinearAttentionConfig
 from fla.models import RetNetConfig
 from fla.models import TransformerConfig
+from fla.models import DeltaNetConfig
+from fla.models import GatedDeltaNetConfig
 
 # Importing model classes
-from fla.models import TransformerForCausalLM  
-from fla.models import GLAForCausalLM  
-from fla.models import RetNetForCausalLM  
-from fla.models import LinearAttentionForCausalLM
+from fla.models import TransformerForCausalLM
+from fla.models import GLAForCausalLM
+from fla.models import RetNetForCausalLM
+from fla.models import LinearAttentionForCausalLM as _LinearAttentionForCausalLM
+from fla.layers.linear_attn import LinearAttention
+
+
+class LinearAttentionForCausalLM(_LinearAttentionForCausalLM):
+    """Switch to fused_recurrent during generate() (handles seq_len=1 token-by-token
+    decoding), then restore chunk mode afterwards for training efficiency."""
+
+    def generate(self, *args, **kwargs):
+        layers = [m for m in self.modules() if isinstance(m, LinearAttention)]
+        original_modes = [m.mode for m in layers]
+        for m in layers:
+            m.mode = 'fused_recurrent'
+        try:
+            return super().generate(*args, **kwargs)
+        finally:
+            for m, mode in zip(layers, original_modes):
+                m.mode = mode
+from fla.models import DeltaNetForCausalLM
+from fla.models import GatedDeltaNetForCausalLM
 
 # Config for standard attention model (e.g. FlashAttention2)
 
@@ -89,11 +110,52 @@ def get_retnet_config(vocab_size, seq_length):
     )
 
 
+def get_deltanet_config(vocab_size, seq_length):
+    return DeltaNetConfig(
+        vocab_size=vocab_size,
+        hidden_size=512,
+        num_hidden_layers=6,
+        num_heads=8,
+        max_position_embeddings=seq_length,
+        pad_token_id=vocab_size - 1,
+        eos_token_id=vocab_size - 1,
+        attn_mode="chunk",
+        expand_k=1.0,
+        expand_v=1.0,
+        use_short_conv=True,
+        fuse_norm=True,
+        fuse_swiglu=True,
+        fuse_cross_entropy=True,
+        fuse_linear_cross_entropy=False,
+    )
+
+
+def get_gated_deltanet_config(vocab_size, seq_length):
+    return GatedDeltaNetConfig(
+        vocab_size=vocab_size,
+        hidden_size=512,
+        num_hidden_layers=6,
+        head_dim=64,
+        num_heads=8,
+        max_position_embeddings=seq_length,
+        pad_token_id=vocab_size - 1,
+        eos_token_id=vocab_size - 1,
+        attn_mode="chunk",
+        use_short_conv=True,
+        fuse_norm=True,
+        fuse_swiglu=True,
+        fuse_cross_entropy=True,
+        fuse_linear_cross_entropy=False,
+    )
+
+
 def get_models_creator_dict():
     return {
         "standard": (get_standard_config, TransformerForCausalLM),
         "linear_attention": (get_linear_attention_config, LinearAttentionForCausalLM),
         "gla": (get_gla_config, GLAForCausalLM),
-        "retnet": (get_retnet_config, RetNetForCausalLM ),
+        "retnet": (get_retnet_config, RetNetForCausalLM),
+        "deltanet": (get_deltanet_config, DeltaNetForCausalLM),
+        "gated_deltanet": (get_gated_deltanet_config, GatedDeltaNetForCausalLM),
     }
 
