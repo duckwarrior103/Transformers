@@ -62,7 +62,7 @@ Expected time: ~15 min
 sbatch jobs/smoke-test/smoke-test.job
 ```
 
-**Pass criteria:** 6 CSVs in `results/smoke-test/<TIMESTAMP>/`, each with 3 rows. Plots auto-generated.
+**Pass criteria:** 6 CSVs in `results/sort_jobs/smoke-test/<TIMESTAMP>/`, each with 3 rows. Plots auto-generated.
 
 ---
 
@@ -80,7 +80,7 @@ SEQ_LENGTH=64, MAX_VALUE=128, EPOCHS=8, TRAIN_EXAMPLES=50000
 sbatch jobs/sweep-models/sweep-models.job
 ```
 
-Outputs in `results/sweep-models/<TIMESTAMP>/`:
+Outputs in `results/sort_jobs/sweep-models/<TIMESTAMP>/`:
 - `model_<TYPE>.csv` — per-epoch results for each model
 - `model_comparison_bar.png` — bar chart of final exact_acc
 - `model_comparison_curves.png` — train/val loss learning curves
@@ -88,7 +88,7 @@ Outputs in `results/sweep-models/<TIMESTAMP>/`:
 
 Re-run plots only:
 ```bash
-python results/sweep-models/plot_model_comparison.py --run_dir results/sweep-models/<TIMESTAMP>
+python results/sort_jobs/sweep-models/plot_model_comparison.py --run_dir results/sort_jobs/sweep-models/<TIMESTAMP>
 ```
 
 ---
@@ -101,13 +101,13 @@ python results/sweep-models/plot_model_comparison.py --run_dir results/sweep-mod
 sbatch jobs/sweep-seq-length/sweep-seq-length.job
 ```
 
-Outputs in `results/sweep-seq-length/`:
+Outputs in `results/sort_jobs/sweep-seq-length/`:
 - `seq_<N>.csv` — results for each sequence length
 - `loss_curves.png`, `accuracy_curves.png`, `final_vs_seq_length.png`
 
 Re-run plots:
 ```bash
-python results/sweep-seq-length/plot_results.py
+python results/sort_jobs/sweep-seq-length/plot_results.py
 ```
 
 ---
@@ -120,12 +120,12 @@ python results/sweep-seq-length/plot_results.py
 sbatch jobs/sweep-seq-vocab/sweep-seq-vocab.job
 ```
 
-Outputs in `results/sweep-seq-vocab/<TIMESTAMP>/`:
+Outputs in `results/sort_jobs/sweep-seq-vocab/<TIMESTAMP>/`:
 - `seq_<SEQ>_maxv_<MAXV>.csv` — one CSV per (seq, vocab) pair
 
 Re-run aggregation and heatmaps:
 ```bash
-python results/sweep-seq-vocab/aggregate_results.py --results_dir results/sweep-seq-vocab/<TIMESTAMP>
+python results/sort_jobs/sweep-seq-vocab/aggregate_results.py --results_dir results/sort_jobs/sweep-seq-vocab/<TIMESTAMP>
 ```
 
 ---
@@ -140,7 +140,7 @@ python results/sweep-seq-vocab/aggregate_results.py --results_dir results/sweep-
 sbatch jobs/sweep-full/sweep-full.job
 ```
 
-Outputs in `results/sweep-full/<TIMESTAMP>/`:
+Outputs in `results/sort_jobs/sweep-full/<TIMESTAMP>/`:
 - `model_<TYPE>/seq_<SEQ>_maxv_<MAXV>.csv` — one CSV per training run
 - `exact_acc_heatmap_<model>.png` — per-model heatmap
 - `exact_acc_comparison.png` — all models side-by-side, same colour scale
@@ -149,7 +149,7 @@ Outputs in `results/sweep-full/<TIMESTAMP>/`:
 
 Re-run aggregation:
 ```bash
-python results/sweep-full/aggregate_full.py --run_dir results/sweep-full/<TIMESTAMP>
+python results/sort_jobs/sweep-full/aggregate_full.py --run_dir results/sort_jobs/sweep-full/<TIMESTAMP>
 ```
 
 ---

@@ -5,7 +5,7 @@
 #SBATCH -c 8
 #SBATCH --ntasks=1
 #SBATCH --time=1-0
-#SBATCH --output=/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/jobs/sweep-seq-vocab/sweep_seq_vocab_%j.out
+#SBATCH --output=/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/sort_jobs/sweep-seq-vocab/sweep_seq_vocab_%j.out
 
 set -e
 
@@ -15,12 +15,14 @@ module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
 source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
 
 BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
-RESULTS_DIR="$BASE/results/sweep-seq-vocab"
-
-# Create a unique folder for this run
+export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 RUN_ID="run_$(date +%Y%m%dT%H%M%S)"  # Use timestamp for uniqueness
-RUN_DIR="$RESULTS_DIR/$RUN_ID"
-mkdir -p "$RUN_DIR"
+RUN_DIR="$BASE/results/sort_jobs/sweep-seq-vocab/$RUN_ID"
+mkdir -p "$RUN_DIR/data"
+exec > >(tee -a "$RUN_DIR/output.log") 2>&1
+
+mkdir -p "$RUN_DIR/data"
+exec > >(tee -a "$RUN_DIR/output.log") 2>&1
 
 # Sequence lengths to test
 SEQ_LIST=(2 4 8 16 32 64 128 256 512 1024 2048 4096)
@@ -34,7 +36,7 @@ declare -a BATCH_PIDS=()
 for SEQ in "${SEQ_LIST[@]}"; do
     for MAXV in "${MAXV_LIST[@]}"; do
         GPU_ID=$(( JOB_IDX % 2 ))
-        OUT_CSV="$RUN_DIR/seq_${SEQ}_maxv_${MAXV}.csv"
+        OUT_CSV="$RUN_DIR/data/seq_${SEQ}_maxv_${MAXV}.csv"
         echo "  running seq=$SEQ max_value=$MAXV gpu=$GPU_ID -> $OUT_CSV"
         CUDA_VISIBLE_DEVICES=$GPU_ID python -u "$BASE/experiments/sort_experiment.py" \
             --model_type "standard" \

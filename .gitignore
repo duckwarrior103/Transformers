@@ -46,6 +46,8 @@ saved_models/
 .venv/
 *.out
 
-# Experiment Results 
+# Experiment Artifacts 
 *.png
 *.csv
+*.log
+

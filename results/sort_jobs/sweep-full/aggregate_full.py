@@ -59,7 +59,7 @@ def parse_seq_maxv(filename):
 def load_all_results(run_dir):
     """Return long-form DataFrame with columns: model, seq_length, vocab_size, + metrics."""
     records = []
-    for model_dir in sorted(glob.glob(os.path.join(run_dir, "model_*"))):
+    for model_dir in sorted(glob.glob(os.path.join(run_dir, "data", "model_*"))):
         if not os.path.isdir(model_dir):
             continue
         model = os.path.basename(model_dir).replace("model_", "")
@@ -105,7 +105,7 @@ def make_pivot(df, model, value="exact_acc"):
 # Plots
 # ---------------------------------------------------------------------------
 
-def plot_per_model_heatmaps(df, run_dir, value="exact_acc", to_percent=True):
+def plot_per_model_heatmaps(df, run_dir, value="exact_acc", to_percent=True, graphs_dir=None):
     """One heatmap per model."""
     models = [m for m in MODEL_ORDER if m in df["model"].values]
     models += [m for m in df["model"].unique() if m not in MODEL_ORDER]
@@ -132,13 +132,13 @@ def plot_per_model_heatmaps(df, run_dir, value="exact_acc", to_percent=True):
         ax.set_xlabel("vocab_size (max_value)")
         ax.set_ylabel("seq_length")
         plt.tight_layout()
-        out = os.path.join(run_dir, f"{value}_heatmap_{model}.png")
+        out = os.path.join(graphs_dir or run_dir, f"{value}_heatmap_{model}.png")
         plt.savefig(out, dpi=150)
         plt.close()
         print(f"Wrote {out}")
 
 
-def plot_stacked_comparison(df, run_dir, value="exact_acc", to_percent=True):
+def plot_stacked_comparison(df, run_dir, value="exact_acc", to_percent=True, graphs_dir=None):
     """All model heatmaps in one figure, same colour scale."""
     models = [m for m in MODEL_ORDER if m in df["model"].values]
     models += [m for m in df["model"].unique() if m not in MODEL_ORDER]
@@ -189,13 +189,13 @@ def plot_stacked_comparison(df, run_dir, value="exact_acc", to_percent=True):
 
     plt.suptitle(f"{value} comparison across models (last epoch)", fontsize=13)
     plt.tight_layout()
-    out = os.path.join(run_dir, f"{value}_comparison.png")
+    out = os.path.join(graphs_dir or run_dir, f"{value}_comparison.png")
     plt.savefig(out, dpi=150)
     plt.close()
     print(f"Wrote {out}")
 
 
-def plot_diff_heatmaps(df, run_dir, value="exact_acc", to_percent=True):
+def plot_diff_heatmaps(df, run_dir, value="exact_acc", to_percent=True, graphs_dir=None):
     """Pairwise difference heatmaps: modelA - modelB."""
     models = [m for m in MODEL_ORDER if m in df["model"].values]
     models += [m for m in df["model"].unique() if m not in MODEL_ORDER]
@@ -224,7 +224,7 @@ def plot_diff_heatmaps(df, run_dir, value="exact_acc", to_percent=True):
             ax.set_xlabel("vocab_size")
             ax.set_ylabel("seq_length")
             plt.tight_layout()
-            out = os.path.join(run_dir, f"{value}_diff_{a}_vs_{b}.png")
+            out = os.path.join(graphs_dir or run_dir, f"{value}_diff_{a}_vs_{b}.png")
             plt.savefig(out, dpi=150)
             plt.close()
             print(f"Wrote {out}")
@@ -243,6 +243,11 @@ def main():
     run_dir = args.run_dir or find_newest_run_dir(BASE_DIR)
     print(f"Aggregating from: {run_dir}")
 
+    data_dir = os.path.join(run_dir, "data")
+    graphs_dir = os.path.join(run_dir, "graphs")
+    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(graphs_dir, exist_ok=True)
+
     df = load_all_results(run_dir)
     if df.empty:
         print("No results found.")
@@ -251,15 +256,15 @@ def main():
     print(f"Loaded {len(df)} records across models: {sorted(df['model'].unique())}")
 
     # Save combined long-form CSV
-    out_csv = os.path.join(run_dir, "sweep_full_combined.csv")
+    out_csv = os.path.join(data_dir, "sweep_full_combined.csv")
     df.to_csv(out_csv, index=False, float_format="%.6f")
     print(f"Wrote {out_csv}")
 
-    plot_per_model_heatmaps(df, run_dir)
-    plot_stacked_comparison(df, run_dir)
-    plot_diff_heatmaps(df, run_dir)
+    plot_per_model_heatmaps(df, run_dir, graphs_dir=graphs_dir)
+    plot_stacked_comparison(df, run_dir, graphs_dir=graphs_dir)
+    plot_diff_heatmaps(df, run_dir, graphs_dir=graphs_dir)
 
-    print(f"Done. All plots in {run_dir}")
+    print(f"Done. Plots in {graphs_dir}")
 
 
 if __name__ == "__main__":

@@ -86,6 +86,7 @@ def get_gla_config(vocab_size, seq_length):
         use_output_gate=True,
         fuse_norm=True,
         fuse_swiglu=True,
+        fuse_cross_entropy=True,
         fuse_linear_cross_entropy=False,
     )
 

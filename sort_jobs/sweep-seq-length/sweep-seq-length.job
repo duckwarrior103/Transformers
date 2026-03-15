@@ -5,7 +5,7 @@
 #SBATCH -c 8
 #SBATCH --ntasks=1
 #SBATCH --time=1-0
-#SBATCH --output=sweep_seq_%j.out
+#SBATCH --output=/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/sort_jobs/sweep-seq-length/sweep_seq_%j.out
 
 set -e
 
@@ -15,8 +15,11 @@ module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
 source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
 
 BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
-RESULTS_DIR="$BASE/results/sweep-seq-length"
-mkdir -p "$RESULTS_DIR"
+export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
+RUN_ID="run_$(date +%Y%m%dT%H%M%S)"
+RUN_DIR="$BASE/results/sort_jobs/sweep-seq-length/$RUN_ID"
+mkdir -p "$RUN_DIR/data"
+exec > >(tee -a "$RUN_DIR/output.log") 2>&1
 
 JOB_IDX=0
 declare -a BATCH_PIDS=()
@@ -35,7 +38,7 @@ for SEQ in 2 4 8 16 32 64 128 256 512 1024; do
         --hidden_size 512 \
         --num_layers 6 \
         --num_heads 8 \
-        --results_file "$RESULTS_DIR/seq_${SEQ}.csv" &
+        --results_file "$RESULTS_DIR/data/seq_${SEQ}.csv" &
     BATCH_PIDS+=($!)
     JOB_IDX=$(( JOB_IDX + 1 ))
 

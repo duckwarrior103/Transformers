@@ -40,7 +40,7 @@ def find_newest_run_dir(base):
 def load_run(run_dir):
     """Return long-form DataFrame: model, seq_length, vocab_size, metrics."""
     records = []
-    for model_dir in sorted(glob.glob(os.path.join(run_dir, "model_*"))):
+    for model_dir in sorted(glob.glob(os.path.join(run_dir, "data", "model_*"))):
         if not os.path.isdir(model_dir):
             continue
         model = os.path.basename(model_dir).replace("model_", "")

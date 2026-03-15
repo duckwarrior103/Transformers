@@ -36,7 +36,7 @@ def find_newest_run_dir(base):
 def load_run(run_dir):
     """Return dict: model_type -> DataFrame (all epochs)."""
     data = {}
-    for fp in sorted(glob.glob(os.path.join(run_dir, "model_*.csv"))):
+    for fp in sorted(glob.glob(os.path.join(run_dir, "data", "model_*.csv"))):
         model = os.path.basename(fp).replace("model_", "").replace(".csv", "")
         try:
             df = pd.read_csv(fp)
@@ -72,7 +72,7 @@ def plot_bar(data, run_dir):
     ax.set_title("Model Comparison — Final Exact Accuracy")
     ax.tick_params(axis="x", rotation=20)
     plt.tight_layout()
-    out = os.path.join(run_dir, "model_comparison_bar.png")
+    out = os.path.join(run_dir, "graphs", "model_comparison_bar.png")
     plt.savefig(out, dpi=150)
     plt.close()
     print(f"Wrote {out}")
@@ -110,35 +110,45 @@ def plot_curves(data, run_dir):
 
     plt.suptitle("Model Comparison — Learning Curves", fontsize=13)
     plt.tight_layout()
-    out = os.path.join(run_dir, "model_comparison_curves.png")
+    out = os.path.join(run_dir, "graphs", "model_comparison_curves.png")
     plt.savefig(out, dpi=150)
     plt.close()
     print(f"Wrote {out}")
 
 
 def plot_acc_curves(data, run_dir):
-    """Exact accuracy curves over epochs, one line per model."""
-    fig, ax = plt.subplots(figsize=(8, 5))
+    """Accuracy curves: exact_acc and token_acc over epochs, one line per model."""
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
     for m in list(MODEL_ORDER) + [k for k in data if k not in MODEL_ORDER]:
         if m not in data:
             continue
         df = data[m]
-        if "exact_acc" not in df.columns:
-            continue
         if "epoch" not in df.columns:
             df = df.copy()
             df["epoch"] = range(1, len(df) + 1)
-        ax.plot(df["epoch"], df["exact_acc"].astype(float) * 100,
-                marker="o", markersize=4, label=m, color=COLOUR_MAP.get(m, "grey"))
+        colour = COLOUR_MAP.get(m, "grey")
+        if "exact_acc" in df.columns:
+            axes[0].plot(df["epoch"], df["exact_acc"].astype(float) * 100,
+                         marker="o", markersize=4, label=m, color=colour)
+        if "token_acc" in df.columns:
+            axes[1].plot(df["epoch"], df["token_acc"].astype(float) * 100,
+                         marker="o", markersize=4, label=m, color=colour)
 
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Exact Accuracy (%)")
-    ax.set_title("Model Comparison — Exact Accuracy over Epochs")
-    ax.legend(fontsize=8)
-    ax.grid(True, alpha=0.4)
+    for ax, title, ylabel in zip(
+        axes,
+        ["Exact Accuracy per Epoch", "Token Accuracy per Epoch"],
+        ["Exact Accuracy (%)", "Token Accuracy (%)"],
+    ):
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.4)
+
+    plt.suptitle("Model Comparison — Accuracy Curves", fontsize=13)
     plt.tight_layout()
-    out = os.path.join(run_dir, "model_comparison_exact_acc.png")
+    out = os.path.join(run_dir, "graphs", "model_comparison_acc_curves.png")
     plt.savefig(out, dpi=150)
     plt.close()
     print(f"Wrote {out}")
@@ -159,6 +169,7 @@ def main():
         return
     print(f"Loaded models: {list(data.keys())}")
 
+    os.makedirs(os.path.join(run_dir, "graphs"), exist_ok=True)
     plot_bar(data, run_dir)
     plot_curves(data, run_dir)
     plot_acc_curves(data, run_dir)

@@ -5,7 +5,7 @@
 #SBATCH -c 8
 #SBATCH --ntasks=1
 #SBATCH --time=1-0
-#SBATCH --output=/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/jobs/sweep-models/sweep_models_%j.out
+#SBATCH --output=/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/sort_jobs/sweep-models/sweep_models_%j.out
 
 # Multi-model sweep: compare all attention mechanisms at fixed (seq, vocab).
 # Produces model_comparison.png — the primary model ranking plot.
@@ -20,9 +20,11 @@ module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
 source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
 
 BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
+export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 RUN_ID="run_$(date +%Y%m%dT%H%M%S)"
-RUN_DIR="$BASE/results/sweep-models/$RUN_ID"
-mkdir -p "$RUN_DIR"
+RUN_DIR="$BASE/results/sort_jobs/sweep-models/$RUN_ID"
+mkdir -p "$RUN_DIR/data"
+exec > >(tee -a "$RUN_DIR/output.log") 2>&1
 
 # ── Experiment parameters ──────────────────────────────────────────────────
 SEQ_LENGTH=64
@@ -49,7 +51,7 @@ declare -a BATCH_PIDS=()
 for MODEL in "${MODEL_LIST[@]}"; do
     GPU_ID=$(( JOB_IDX % 2 ))
     echo "===== model=$MODEL (gpu=$GPU_ID) ====="
-    OUT_CSV="$RUN_DIR/model_${MODEL}.csv"
+    OUT_CSV="$RUN_DIR/data/model_${MODEL}.csv"
     CUDA_VISIBLE_DEVICES=$GPU_ID python -u "$BASE/experiments/sort_experiment.py" \
         --model_type "$MODEL" \
         --seq_length "$SEQ_LENGTH" \
@@ -75,6 +77,6 @@ done
 for pid in "${BATCH_PIDS[@]}"; do wait "$pid" || true; done
 
 echo "===== All models complete. Generating comparison plots... ====="
-python -u "$BASE/results/sweep-models/plot_model_comparison.py" --run_dir "$RUN_DIR"
+python -u "$BASE/results/sort_jobs/sweep-models/plot_model_comparison.py" --run_dir "$RUN_DIR"
 
 echo "===== Sweep-models finished. Results in $RUN_DIR ====="

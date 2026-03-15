@@ -113,7 +113,9 @@ class SortingDataset(Dataset):
 train_dataset = SortingDataset(TRAIN_EXAMPLES, SEQUENCE_LENGTH, MAX_VALUE)
 val_dataset = SortingDataset(VAL_EXAMPLES, SEQUENCE_LENGTH, MAX_VALUE)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+_T = 2 * SEQUENCE_LENGTH + 2
+eval_batch_size = min(BATCH_SIZE, max(1, (4 * 1024 * 1024 * 1024) // (_T * VOCAB_SIZE * 2)))
+val_loader = DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
 # ============================================================================
 # Model
@@ -123,6 +125,7 @@ model_creator_dict = get_models_creator_dict()
 model_config, model_class = model_creator_dict[MODEL_TYPE]
 model = model_class(model_config(VOCAB_SIZE, SEQUENCE_LENGTH))
 model = model.to(device=device, dtype=torch.bfloat16)
+model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
 num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Model parameters: {num_params:,}")

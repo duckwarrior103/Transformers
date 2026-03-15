@@ -4,8 +4,8 @@
 #SBATCH --gpus=2
 #SBATCH -c 8
 #SBATCH --ntasks=1
-#SBATCH --time=7-0
-#SBATCH --output=/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/jobs/sweep-full/sweep_full_%j.out
+#SBATCH --time=4-0
+#SBATCH --output=/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/sort_jobs/sweep-full/sweep_full_%j.out
 
 # Full 3D sweep: all models × all seq_lengths × all max_values.
 #
@@ -18,14 +18,16 @@
 #
 # Directory layout:
 #   results/sweep-full/<RUN_ID>/
-#     model_standard/seq_16_maxv_64.csv   (one CSV per training run)
-#     model_gla/seq_16_maxv_64.csv
-#     ...
-#   After aggregation (auto-called at end of job):
-#     exact_acc_heatmap_standard.png      (per-model heatmap)
-#     exact_acc_heatmap_gla.png
-#     exact_acc_comparison.png            (all models side-by-side, same colour scale)
-#     exact_acc_diff_standard_vs_gla.png  (pairwise difference maps)
+#     data/
+#       model_standard/seq_16_maxv_64.csv   (one CSV per training run)
+#       model_gla/seq_16_maxv_64.csv
+#       ...
+#       sweep_full_combined.csv             (aggregate output)
+#     graphs/
+#       exact_acc_heatmap_standard.png      (per-model heatmap)
+#       exact_acc_heatmap_gla.png
+#       exact_acc_comparison.png            (all models side-by-side, same colour scale)
+#       exact_acc_diff_standard_vs_gla.png  (pairwise difference maps)
 
 set -e
 
@@ -35,9 +37,11 @@ module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
 source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
 
 BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
+export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 RUN_ID="run_$(date +%Y%m%dT%H%M%S)"
-RUN_DIR="$BASE/results/sweep-full/$RUN_ID"
+RUN_DIR="$BASE/results/sort_jobs/sweep-full/$RUN_ID"
 mkdir -p "$RUN_DIR"
+exec > >(tee -a "$RUN_DIR/output.log") 2>&1
 
 # ── Experiment parameters ──────────────────────────────────────────────────
 MODEL_LIST=(standard linear_attention gla retnet deltanet gated_deltanet)
@@ -66,7 +70,7 @@ JOB_IDX=0
 declare -a BATCH_PIDS=()
 
 for MODEL in "${MODEL_LIST[@]}"; do
-    MODEL_DIR="$RUN_DIR/model_${MODEL}"
+    MODEL_DIR="$RUN_DIR/data/model_${MODEL}"
     mkdir -p "$MODEL_DIR"
     echo "========== model=$MODEL =========="
 
@@ -103,6 +107,6 @@ done
 for pid in "${BATCH_PIDS[@]}"; do wait "$pid" || true; done
 
 echo "===== All runs complete. Generating plots... ====="
-python -u "$BASE/results/sweep-full/aggregate_full.py" --run_dir "$RUN_DIR"
+python -u "$BASE/results/sort_jobs/sweep-full/aggregate_full.py" --run_dir "$RUN_DIR"
 
 echo "===== Sweep-full done. Results in $RUN_DIR ====="

@@ -4,11 +4,14 @@ import glob
 import os
 
 results_dir = os.path.dirname(os.path.abspath(__file__))
-csv_files = sorted(glob.glob(os.path.join(results_dir, "seq_*.csv")),
+data_dir = os.path.join(results_dir, "data")
+graphs_dir = os.path.join(results_dir, "graphs")
+os.makedirs(graphs_dir, exist_ok=True)
+csv_files = sorted(glob.glob(os.path.join(data_dir, "seq_*.csv")),
                    key=lambda f: int(os.path.basename(f).split("_")[1].split(".")[0]))
 
 if not csv_files:
-    print(f"No CSV files found in {results_dir}")
+    print(f"No CSV files found in {data_dir}")
     exit(1)
 
 # ── 1. Per-epoch loss curves (overlaid by seq_length) ──
@@ -23,7 +26,7 @@ axes[0].legend(); axes[0].grid(True)
 axes[1].set_xlabel("Epoch"); axes[1].set_ylabel("Val Loss"); axes[1].set_title("Val Loss vs Epoch")
 axes[1].legend(); axes[1].grid(True)
 plt.tight_layout()
-plt.savefig(os.path.join(results_dir, "loss_curves.png"), dpi=150)
+plt.savefig(os.path.join(graphs_dir, "loss_curves.png"), dpi=150)
 print("Saved loss_curves.png")
 
 # ── 2. Per-epoch accuracy curves (overlaid by seq_length) ──
@@ -38,7 +41,7 @@ axes[0].legend(); axes[0].grid(True)
 axes[1].set_xlabel("Epoch"); axes[1].set_ylabel("Exact Acc (%)"); axes[1].set_title("Exact Accuracy vs Epoch")
 axes[1].legend(); axes[1].grid(True)
 plt.tight_layout()
-plt.savefig(os.path.join(results_dir, "accuracy_curves.png"), dpi=150)
+plt.savefig(os.path.join(graphs_dir, "accuracy_curves.png"), dpi=150)
 print("Saved accuracy_curves.png")
 
 # ── 3. Final metrics vs sequence length ──
@@ -70,5 +73,5 @@ axes[1].set_title("Final Accuracy vs Sequence Length")
 axes[1].set_xscale("log", base=2); axes[1].legend(); axes[1].grid(True)
 
 plt.tight_layout()
-plt.savefig(os.path.join(results_dir, "final_vs_seq_length.png"), dpi=150)
+plt.savefig(os.path.join(graphs_dir, "final_vs_seq_length.png"), dpi=150)
 print("Saved final_vs_seq_length.png")

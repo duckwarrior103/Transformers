@@ -1,4 +1,4 @@
-"""Plot smoke-test results for all models.
+"""Plot sweep-models results for all models.
 
 Reads model_<TYPE>.csv files from a run directory and produces four line graphs
 in a graphs/ subfolder:
@@ -8,7 +8,7 @@ in a graphs/ subfolder:
   - val_loss.png   : validation loss vs epoch, one line per model
 
 Usage:
-    python plot.py results/smoke-test/run_20260310T172646/
+    python plot.py results/sweep-models/run_<ID>/
     python plot.py          # auto-detects newest run subdirectory
 """
 
@@ -38,7 +38,7 @@ def find_newest_run_dir(base):
 
 def load_run(run_dir):
     data = {}
-    for fp in sorted(glob.glob(os.path.join(run_dir, "model_*.csv"))):
+    for fp in sorted(glob.glob(os.path.join(run_dir, "data", "model_*.csv"))):
         model = os.path.basename(fp).replace("model_", "").replace(".csv", "")
         try:
             df = pd.read_csv(fp)
@@ -86,13 +86,13 @@ def main():
     os.makedirs(graphs_dir, exist_ok=True)
 
     plot_metric(data, graphs_dir, "exact_acc", "Exact Accuracy (%)",
-                "Smoke Test — Exact Accuracy per Epoch", "exact_acc.png", scale=100)
+                "Model Sweep — Exact Accuracy per Epoch", "exact_acc.png", scale=100)
     plot_metric(data, graphs_dir, "token_acc", "Token Accuracy (%)",
-                "Smoke Test — Token Accuracy per Epoch", "token_acc.png", scale=100)
+                "Model Sweep — Token Accuracy per Epoch", "token_acc.png", scale=100)
     plot_metric(data, graphs_dir, "train_loss", "Train Loss",
-                "Smoke Test — Train Loss per Epoch", "train_loss.png")
+                "Model Sweep — Train Loss per Epoch", "train_loss.png")
     plot_metric(data, graphs_dir, "val_loss", "Val Loss",
-                "Smoke Test — Val Loss per Epoch", "val_loss.png")
+                "Model Sweep — Val Loss per Epoch", "val_loss.png")
 
     print("Done.")
 
