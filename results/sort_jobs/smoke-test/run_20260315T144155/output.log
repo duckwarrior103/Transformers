@@ -1,265 +1,0 @@
-Smoke test run: run_20260315T144155
-Results dir:    /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/results/sort_jobs/smoke-test/run_20260315T144155
-===== model=standard (gpu=0) =====
-===== model=linear_attention (gpu=1) =====
-
-Using device: cuda
-GPU: NVIDIA A100-SXM4-80GB
-
-
-Using device: cuda
-GPU: NVIDIA A100-SXM4-80GB
-
-Config: seq_length=32, vocab_size=66, train_examples=2000, epochs=3, lr=0.0003, hidden_size=512
-Config: seq_length=32, vocab_size=66, train_examples=2000, epochs=3, lr=0.0003, hidden_size=512
-Model parameters: 20,621,696
-
-Epoch 1/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Model parameters: 20,521,472
-
-Epoch 1/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:38<19:44, 38.20s/it]Training:   6%|▋         | 2/32 [00:38<07:56, 15.88s/it]Training:  19%|█▉        | 6/32 [00:38<01:35,  3.67s/it]Training:  31%|███▏      | 10/32 [00:38<00:38,  1.76s/it]Training:  44%|████▍     | 14/32 [00:38<00:18,  1.02s/it]Training:  56%|█████▋    | 18/32 [00:38<00:09,  1.55it/s]Training:  69%|██████▉   | 22/32 [00:39<00:04,  2.32it/s]Training:  81%|████████▏ | 26/32 [00:39<00:01,  3.37it/s]Training:  94%|█████████▍| 30/32 [00:39<00:00,  4.74it/s]Training:  94%|█████████▍| 30/32 [00:50<00:00,  4.74it/s]Training: 100%|██████████| 32/32 [00:55<00:00,  1.64s/it]Training: 100%|██████████| 32/32 [00:55<00:00,  1.72s/it]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  5.87it/s]Evaluating: 100%|██████████| 8/8 [00:11<00:00,  1.51s/it]Evaluating: 100%|██████████| 8/8 [00:11<00:00,  1.47s/it]
-Train Loss: 2.7910, Val Loss: 1.5321, Val Exact Acc: 0.00%, Val Token Acc: 49.04%, Epoch Time: 66.81s
-
-Epoch 2/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:04,  6.81it/s]Training:  12%|█▎        | 4/32 [00:00<00:01, 18.18it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 22.96it/s]Training:  34%|███▍      | 11/32 [00:00<00:00, 26.20it/s]Training:  47%|████▋     | 15/32 [00:00<00:00, 27.64it/s]Training:  56%|█████▋    | 18/32 [00:00<00:00, 28.14it/s]Training:  66%|██████▌   | 21/32 [00:00<00:00, 28.53it/s]Training:  75%|███████▌  | 24/32 [00:00<00:00, 28.86it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 29.56it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 29.96it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 26.27it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:00,  7.92it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 33.48it/s]
-Train Loss: 1.1845, Val Loss: 0.9105, Val Exact Acc: 0.00%, Val Token Acc: 71.49%, Epoch Time: 1.46s
-
-Epoch 3/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:05,  5.49it/s]Training:  12%|█▎        | 4/32 [00:00<00:01, 15.54it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 20.28it/s]Training:  31%|███▏      | 10/32 [00:00<00:00, 22.73it/s]Training:  41%|████      | 13/32 [00:00<00:00, 23.96it/s]Training:  50%|█████     | 16/32 [00:00<00:00, 25.02it/s]Training:  59%|█████▉    | 19/32 [00:00<00:00, 25.77it/s]Training:  69%|██████▉   | 22/32 [00:00<00:00, 26.24it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 26.64it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 27.22it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 27.67it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 23.68it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:00,  7.08it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 30.31it/s]
-Train Loss: 0.8413, Val Loss: 0.8249, Val Exact Acc: 0.00%, Val Token Acc: 74.77%, Epoch Time: 1.62s
-
-Total Training Time: 69.89s
-
-======================================================================
-TESTING ON RANDOM NEW SAMPLES
-======================================================================
-The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
-Training:   3%|▎         | 1/32 [01:11<36:50, 71.31s/it]Training:  12%|█▎        | 4/32 [01:11<06:18, 13.53s/it]Training:  22%|██▏       | 7/32 [01:11<02:37,  6.29s/it]Training:  31%|███▏      | 10/32 [01:11<01:18,  3.58s/it]Training:  41%|████      | 13/32 [01:11<00:42,  2.23s/it]Training:  50%|█████     | 16/32 [01:11<00:23,  1.45s/it]Training:  59%|█████▉    | 19/32 [01:12<00:12,  1.02it/s]Training:  69%|██████▉   | 22/32 [01:12<00:06,  1.48it/s]Training:  78%|███████▊  | 25/32 [01:12<00:03,  2.10it/s]Training:  88%|████████▊ | 28/32 [01:12<00:01,  2.94it/s]Training:  97%|█████████▋| 31/32 [01:12<00:00,  4.03it/s]This is a friendly reminder - the current text generation call has exceeded the model's predefined maximum length (32). Depending on the model, you may observe exceptions, performance degradation, or nothing at all.
-Input: [23, 61, 24, 0, 32, 48, 11, 13, 15, 58]..., Predicted: [0, 1, 3, 5, 8, 11, 13, 15, 18, 23]..., Expected: [0, 1, 3, 8, 11, 13, 13, 15, 18, 23]..., Token Acc: 34.4%, Exact: ✗
-Input: [55, 17, 29, 26, 53, 23, 4, 50, 39, 63]..., Predicted: [4, 9, 12, 13, 14, 17, 23, 24, 25, 26]..., Expected: [4, 4, 9, 12, 13, 14, 17, 23, 24, 25]..., Token Acc: 37.5%, Exact: ✗
-Input: [63, 12, 0, 40, 63, 10, 64, 13, 41, 53]..., Predicted: [0, 2, 4, 4, 7, 8, 9, 10, 12, 13]..., Expected: [0, 2, 4, 4, 7, 8, 9, 10, 12, 13]..., Token Acc: 37.5%, Exact: ✗
-Input: [61, 36, 57, 29, 44, 0, 58, 41, 51, 15]..., Predicted: [0, 2, 4, 6, 7, 7, 7, 7, 7, 7]..., Expected: [0, 2, 6, 7, 7, 10, 13, 14, 15, 15]..., Token Acc: 9.4%, Exact: ✗
-Input: [52, 46, 39, 24, 57, 53, 2, 10, 34, 21]..., Predicted: [0, 2, 4, 10, 10, 10, 10, 10, 10, 10]..., Expected: [0, 2, 4, 8, 10, 10, 10, 13, 18, 21]..., Token Acc: 18.8%, Exact: ✗
-
-Done.
-Training: 100%|██████████| 32/32 [01:21<00:00,  2.55s/it]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  6.29it/s]Evaluating: 100%|██████████| 8/8 [00:04<00:00,  1.60it/s]Evaluating: 100%|██████████| 8/8 [00:04<00:00,  1.62it/s]
-Train Loss: 2.5268, Val Loss: 1.4232, Val Exact Acc: 0.00%, Val Token Acc: 50.69%, Epoch Time: 86.42s
-
-Epoch 2/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:05,  5.63it/s]Training:  12%|█▎        | 4/32 [00:00<00:01, 14.44it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 18.15it/s]Training:  31%|███▏      | 10/32 [00:00<00:01, 20.01it/s]Training:  41%|████      | 13/32 [00:00<00:00, 21.01it/s]Training:  50%|█████     | 16/32 [00:00<00:00, 21.69it/s]Training:  59%|█████▉    | 19/32 [00:00<00:00, 22.14it/s]Training:  69%|██████▉   | 22/32 [00:01<00:00, 22.46it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 22.67it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 23.06it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 23.37it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 20.21it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  6.85it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 27.22it/s]
-Train Loss: 0.9579, Val Loss: 0.6849, Val Exact Acc: 0.00%, Val Token Acc: 73.54%, Epoch Time: 1.88s
-
-Epoch 3/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:05,  5.47it/s]Training:  12%|█▎        | 4/32 [00:00<00:01, 14.27it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 17.98it/s]Training:  31%|███▏      | 10/32 [00:00<00:01, 19.89it/s]Training:  41%|████      | 13/32 [00:00<00:00, 21.05it/s]Training:  50%|█████     | 16/32 [00:00<00:00, 21.80it/s]Training:  59%|█████▉    | 19/32 [00:00<00:00, 22.30it/s]Training:  69%|██████▉   | 22/32 [00:01<00:00, 22.60it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 22.87it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 23.23it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 23.46it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 20.22it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  6.51it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 28.27it/s]
-Train Loss: 0.6459, Val Loss: 0.6384, Val Exact Acc: 0.20%, Val Token Acc: 74.29%, Epoch Time: 1.87s
-✓ New best model.
-
-Total Training Time: 90.17s
-
-======================================================================
-TESTING ON RANDOM NEW SAMPLES
-======================================================================
-The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
-This is a friendly reminder - the current text generation call has exceeded the model's predefined maximum length (32). Depending on the model, you may observe exceptions, performance degradation, or nothing at all.
-Input: [25, 47, 32, 44, 13, 48, 30, 11, 49, 56]..., Predicted: [7, 7, 7, 7, 7, 7, 7, 7, 7, 7]..., Expected: [7, 11, 13, 15, 17, 23, 25, 30, 32, 32]..., Token Acc: 3.1%, Exact: ✗
-Input: [40, 33, 51, 34, 30, 31, 42, 1, 59, 19]..., Predicted: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]..., Expected: [1, 1, 1, 8, 11, 13, 15, 19, 22, 23]..., Token Acc: 9.4%, Exact: ✗
-Input: [8, 60, 8, 4, 1, 33, 12, 27, 38, 6]..., Predicted: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]..., Expected: [1, 1, 3, 4, 4, 6, 8, 8, 11, 12]..., Token Acc: 6.2%, Exact: ✗
-Input: [44, 53, 60, 1, 5, 25, 60, 63, 7, 44]..., Predicted: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]..., Expected: [0, 0, 1, 5, 5, 7, 12, 12, 13, 14]..., Token Acc: 6.2%, Exact: ✗
-Input: [19, 45, 7, 35, 8, 12, 63, 26, 45, 35]..., Predicted: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]..., Expected: [0, 3, 5, 7, 8, 8, 9, 12, 19, 21]..., Token Acc: 3.1%, Exact: ✗
-
-Done.
-===== model=gla (gpu=0) =====
-===== model=retnet (gpu=1) =====
-
-Using device: cuda
-GPU: NVIDIA A100-SXM4-80GB
-
-
-Using device: cuda
-GPU: NVIDIA A100-SXM4-80GB
-
-Config: seq_length=32, vocab_size=66, train_examples=2000, epochs=3, lr=0.0003, hidden_size=512
-Config: seq_length=32, vocab_size=66, train_examples=2000, epochs=3, lr=0.0003, hidden_size=512
-Model parameters: 15,016,832
-
-Epoch 1/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Model parameters: 22,196,096
-
-Epoch 1/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [01:19<41:04, 79.51s/it]Training:   9%|▉         | 3/32 [01:19<09:59, 20.66s/it]Training:  19%|█▉        | 6/32 [01:19<03:28,  8.01s/it]Training:  28%|██▊       | 9/32 [01:19<01:38,  4.29s/it]Training:  38%|███▊      | 12/32 [01:20<00:51,  2.59s/it]Training:  47%|████▋     | 15/32 [01:20<00:28,  1.67s/it]Training:  56%|█████▋    | 18/32 [01:20<00:15,  1.11s/it]Training:  66%|██████▌   | 21/32 [01:20<00:08,  1.31it/s]Training:  75%|███████▌  | 24/32 [01:20<00:04,  1.87it/s]Training:  84%|████████▍ | 27/32 [01:20<00:01,  2.63it/s]Training:  94%|█████████▍| 30/32 [01:20<00:00,  3.61it/s]Training: 100%|██████████| 32/32 [01:32<00:00,  2.89s/it]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:16<01:53, 16.16s/it]Evaluating: 100%|██████████| 8/8 [00:23<00:00,  2.40s/it]Evaluating: 100%|██████████| 8/8 [00:23<00:00,  2.92s/it]
-Train Loss: 3.2650, Val Loss: 1.9073, Val Exact Acc: 0.00%, Val Token Acc: 30.21%, Epoch Time: 115.85s
-
-Epoch 2/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [01:55<59:32, 115.23s/it]Training:   3%|▎         | 1/32 [00:00<00:06,  5.09it/s]Training:  12%|█▎        | 4/32 [01:55<10:11, 21.84s/it] Training:  12%|█▎        | 4/32 [00:00<00:02, 13.80it/s]Training:  22%|██▏       | 7/32 [01:55<04:13, 10.14s/it]Training:  22%|██▏       | 7/32 [00:00<00:01, 17.58it/s]Training:  31%|███▏      | 10/32 [01:55<02:06,  5.76s/it]Training:  31%|███▏      | 10/32 [00:00<00:01, 19.66it/s]Training:  41%|████      | 13/32 [01:55<01:07,  3.57s/it]Training:  41%|████      | 13/32 [00:00<00:00, 20.97it/s]Training:  50%|█████     | 16/32 [01:55<00:37,  2.33s/it]Training:  50%|█████     | 16/32 [00:00<00:00, 21.76it/s]Training:  59%|█████▉    | 19/32 [01:56<00:20,  1.56s/it]Training:  59%|█████▉    | 19/32 [00:00<00:00, 22.22it/s]Training:  69%|██████▉   | 22/32 [01:56<00:10,  1.07s/it]Training:  69%|██████▉   | 22/32 [00:01<00:00, 22.50it/s]Training:  78%|███████▊  | 25/32 [01:56<00:05,  1.34it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 22.84it/s]Training:  88%|████████▊ | 28/32 [01:56<00:02,  1.90it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 23.17it/s]Training:  97%|█████████▋| 31/32 [01:56<00:00,  2.65it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 23.46it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 20.26it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  6.23it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 26.87it/s]
-Train Loss: 1.6866, Val Loss: 1.4566, Val Exact Acc: 0.00%, Val Token Acc: 48.95%, Epoch Time: 1.88s
-
-Epoch 3/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:06,  4.83it/s]Training:  12%|█▎        | 4/32 [00:00<00:02, 13.44it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 17.42it/s]Training:  31%|███▏      | 10/32 [00:00<00:01, 19.63it/s]Training:  41%|████      | 13/32 [00:00<00:00, 20.87it/s]Training:  50%|█████     | 16/32 [00:00<00:00, 21.60it/s]Training:  59%|█████▉    | 19/32 [00:00<00:00, 22.05it/s]Training:  69%|██████▉   | 22/32 [00:01<00:00, 22.29it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 22.52it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 22.96it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 23.21it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 19.99it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  6.18it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 25.56it/s]
-Train Loss: 1.3628, Val Loss: 1.3424, Val Exact Acc: 0.00%, Val Token Acc: 54.31%, Epoch Time: 1.92s
-
-Total Training Time: 119.65s
-
-======================================================================
-TESTING ON RANDOM NEW SAMPLES
-======================================================================
-The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
-Training: 100%|██████████| 32/32 [02:04<00:00,  3.89s/it]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]This is a friendly reminder - the current text generation call has exceeded the model's predefined maximum length (32). Depending on the model, you may observe exceptions, performance degradation, or nothing at all.
-Input: [59, 4, 38, 17, 44, 5, 56, 33, 20, 40]..., Predicted: [1, 3, 4, 5, 8, 9, 11, 13, 15, 18]..., Expected: [1, 3, 4, 5, 9, 11, 15, 17, 18, 19]..., Token Acc: 12.5%, Exact: ✗
-Input: [6, 23, 1, 17, 8, 46, 42, 45, 17, 32]..., Predicted: [1, 6, 8, 9, 10, 15, 16, 17, 18, 19]..., Expected: [1, 6, 6, 8, 9, 10, 15, 16, 17, 17]..., Token Acc: 9.4%, Exact: ✗
-Input: [50, 56, 35, 52, 28, 57, 34, 41, 61, 17]..., Predicted: [2, 7, 9, 12, 15, 17, 17, 17, 17, 17]..., Expected: [2, 9, 12, 17, 17, 18, 27, 28, 32, 33]..., Token Acc: 3.1%, Exact: ✗
-Input: [17, 15, 57, 52, 35, 35, 59, 40, 30, 24]..., Predicted: [0, 5, 8, 9, 14, 15, 15, 15, 15, 15]..., Expected: [0, 8, 9, 14, 15, 15, 17, 17, 18, 24]..., Token Acc: 6.2%, Exact: ✗
-Input: [19, 38, 57, 44, 51, 21, 17, 25, 12, 4]..., Predicted: [1, 3, 4, 6, 7, 10, 12, 13, 13, 13]..., Expected: [1, 3, 4, 6, 12, 12, 13, 13, 15, 17]..., Token Acc: 15.6%, Exact: ✗
-
-Done.
-Evaluating:  12%|█▎        | 1/8 [00:16<01:58, 16.88s/it]Evaluating: 100%|██████████| 8/8 [00:22<00:00,  2.23s/it]Evaluating: 100%|██████████| 8/8 [00:22<00:00,  2.79s/it]
-Train Loss: 2.8501, Val Loss: 1.8107, Val Exact Acc: 0.00%, Val Token Acc: 32.61%, Epoch Time: 146.90s
-
-Epoch 2/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:06,  4.77it/s]Training:  12%|█▎        | 4/32 [00:00<00:02, 12.79it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 16.24it/s]Training:  31%|███▏      | 10/32 [00:00<00:01, 18.06it/s]Training:  41%|████      | 13/32 [00:00<00:00, 19.09it/s]Training:  50%|█████     | 16/32 [00:00<00:00, 19.72it/s]Training:  59%|█████▉    | 19/32 [00:01<00:00, 20.12it/s]Training:  69%|██████▉   | 22/32 [00:01<00:00, 20.41it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 20.62it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 20.88it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 21.08it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 18.45it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  5.75it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 23.92it/s]
-Train Loss: 1.6549, Val Loss: 1.4969, Val Exact Acc: 0.00%, Val Token Acc: 44.34%, Epoch Time: 2.07s
-
-Epoch 3/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:06,  4.79it/s]Training:  12%|█▎        | 4/32 [00:00<00:02, 12.70it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 16.25it/s]Training:  31%|███▏      | 10/32 [00:00<00:01, 18.10it/s]Training:  41%|████      | 13/32 [00:00<00:00, 19.16it/s]Training:  50%|█████     | 16/32 [00:00<00:00, 19.87it/s]Training:  59%|█████▉    | 19/32 [00:01<00:00, 20.68it/s]Training:  69%|██████▉   | 22/32 [00:01<00:00, 21.29it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 21.76it/s]Training:  88%|████████▊ | 28/32 [00:01<00:00, 22.13it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 22.44it/s]Training: 100%|██████████| 32/32 [00:01<00:00, 19.02it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  6.67it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 25.87it/s]
-Train Loss: 1.4636, Val Loss: 1.4484, Val Exact Acc: 0.00%, Val Token Acc: 46.69%, Epoch Time: 1.99s
-
-Total Training Time: 150.97s
-
-======================================================================
-TESTING ON RANDOM NEW SAMPLES
-======================================================================
-The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
-This is a friendly reminder - the current text generation call has exceeded the model's predefined maximum length (32). Depending on the model, you may observe exceptions, performance degradation, or nothing at all.
-Input: [49, 26, 26, 50, 13, 28, 29, 49, 15, 51]..., Predicted: [2, 3, 5, 8, 8, 8, 8, 8, 8, 8]..., Expected: [2, 3, 5, 8, 13, 13, 15, 15, 16, 18]..., Token Acc: 12.5%, Exact: ✗
-Input: [16, 41, 22, 27, 42, 12, 35, 53, 3, 9]..., Predicted: [1, 3, 3, 3, 3, 3, 3, 3, 3, 3]..., Expected: [1, 1, 3, 3, 6, 7, 9, 9, 12, 12]..., Token Acc: 9.4%, Exact: ✗
-Input: [14, 54, 23, 44, 3, 38, 50, 52, 34, 6]..., Predicted: [3, 4, 6, 9, 13, 14, 16, 19, 20, 21]..., Expected: [3, 4, 4, 6, 9, 13, 14, 14, 16, 19]..., Token Acc: 12.5%, Exact: ✗
-Input: [35, 61, 50, 22, 51, 26, 1, 11, 57, 8]..., Predicted: [1, 5, 7, 7, 7, 7, 7, 7, 7, 7]..., Expected: [1, 7, 7, 8, 11, 11, 13, 16, 16, 22]..., Token Acc: 6.2%, Exact: ✗
-Input: [3, 26, 41, 41, 20, 9, 21, 6, 15, 50]..., Predicted: [0, 2, 3, 6, 9, 11, 15, 17, 20, 21]..., Expected: [0, 2, 3, 6, 9, 11, 15, 20, 20, 21]..., Token Acc: 31.2%, Exact: ✗
-
-Done.
-===== model=deltanet (gpu=0) =====
-===== model=gated_deltanet (gpu=1) =====
-
-Using device: cuda
-GPU: NVIDIA A100-SXM4-80GB
-
-Config: seq_length=32, vocab_size=66, train_examples=2000, epochs=3, lr=0.0003, hidden_size=512
-
-Using device: cuda
-GPU: NVIDIA A100-SXM4-80GB
-
-Config: seq_length=32, vocab_size=66, train_examples=2000, epochs=3, lr=0.0003, hidden_size=512
-Model parameters: 26,912,096
-
-Epoch 1/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Model parameters: 20,583,296
-
-Epoch 1/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]loc("/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/lib/python3.12/site-packages/fla/ops/gated_delta_rule/wy_fast.py":223:23): error: 'arith.mulf' op requires the same encoding for all operands and results
-Training:   0%|          | 0/32 [01:00<?, ?it/s]
-Traceback (most recent call last):
-  File "/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/experiments/sort_experiment.py", line 193, in <module>
-    train_loss = train_epoch()
-                 ^^^^^^^^^^^^^
-  File "/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/experiments/sort_experiment.py", line 150, in train_epoch
-    loss.backward()
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/torch/_tensor.py", line 626, in backward
-    torch.autograd.backward(
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/torch/autograd/__init__.py", line 347, in backward
-    _engine_run_backward(
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/torch/autograd/graph.py", line 823, in _engine_run_backward
-    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/torch/autograd/function.py", line 307, in apply
-    return user_fn(self, *args)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/lib/python3.12/site-packages/fla/utils.py", line 166, in wrapper
-    return fn(*contiguous_args, **contiguous_kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/torch/amp/autocast_mode.py", line 549, in decorate_bwd
-    return bwd(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/lib/python3.12/site-packages/fla/ops/gated_delta_rule/chunk.py", line 197, in backward
-    dq, dk, dv, db, dg, dh0 = chunk_gated_delta_rule_bwd(
-                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/lib/python3.12/site-packages/fla/ops/gated_delta_rule/chunk.py", line 133, in chunk_gated_delta_rule_bwd
-    dk2, dv, db, dg2 = prepare_wy_repr_bwd(
-                       ^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/lib/python3.12/site-packages/fla/ops/gated_delta_rule/wy_fast.py", line 303, in prepare_wy_repr_bwd
-    prepare_wy_repr_bwd_kernel[(NT, B * H)](
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/runtime/jit.py", line 330, in <lambda>
-    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)
-                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/runtime/autotuner.py", line 385, in run
-    return self.fn.run(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/runtime/autotuner.py", line 186, in run
-    timings = {config: self._bench(*args, config=config, **kwargs) for config in pruned_configs}
-                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/runtime/autotuner.py", line 166, in _bench
-    return self.do_bench(kernel_call, quantiles=(0.5, 0.2, 0.8))
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/testing.py", line 117, in do_bench
-    fn()
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/runtime/autotuner.py", line 152, in kernel_call
-    self.fn.run(
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/runtime/jit.py", line 623, in run
-    kernel = self.compile(
-             ^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/compiler/compiler.py", line 279, in compile
-    next_module = compile_ir(module, metadata)
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/backends/nvidia/compiler.py", line 386, in <lambda>
-    stages["ttgir"] = lambda src, metadata: self.make_ttgir(src, metadata, options, self.capability)
-                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/apps/apps/binapps/pytorch/2.6.0/python3.12/gpu-cuda12.4/lib/python3.12/site-packages/triton/backends/nvidia/compiler.py", line 252, in make_ttgir
-    pm.run(mod)
-RuntimeError: PassManager::run failed
-Training:   3%|▎         | 1/32 [01:12<37:41, 72.95s/it]Training:   9%|▉         | 3/32 [01:13<09:09, 18.96s/it]Training:  16%|█▌        | 5/32 [01:13<04:09,  9.24s/it]Training:  22%|██▏       | 7/32 [01:13<02:13,  5.35s/it]Training:  28%|██▊       | 9/32 [01:13<01:17,  3.36s/it]Training:  34%|███▍      | 11/32 [01:13<00:46,  2.20s/it]Training:  41%|████      | 13/32 [01:13<00:28,  1.49s/it]Training:  47%|████▋     | 15/32 [01:13<00:17,  1.03s/it]Training:  53%|█████▎    | 17/32 [01:13<00:10,  1.38it/s]Training:  59%|█████▉    | 19/32 [01:14<00:06,  1.93it/s]Training:  66%|██████▌   | 21/32 [01:14<00:04,  2.65it/s]Training:  72%|███████▏  | 23/32 [01:14<00:02,  3.57it/s]Training:  78%|███████▊  | 25/32 [01:14<00:01,  4.71it/s]Training:  84%|████████▍ | 27/32 [01:14<00:00,  6.04it/s]Training:  91%|█████████ | 29/32 [01:14<00:00,  7.54it/s]Training:  97%|█████████▋| 31/32 [01:14<00:00,  9.09it/s]Training:  97%|█████████▋| 31/32 [01:30<00:00,  9.09it/s]Training: 100%|██████████| 32/32 [01:45<00:00,  5.47s/it]Training: 100%|██████████| 32/32 [01:45<00:00,  3.29s/it]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:04<00:29,  4.19s/it]Evaluating:  88%|████████▊ | 7/8 [00:04<00:00,  2.20it/s]Evaluating:  88%|████████▊ | 7/8 [00:14<00:00,  2.20it/s]Evaluating: 100%|██████████| 8/8 [00:19<00:00,  2.97s/it]Evaluating: 100%|██████████| 8/8 [00:19<00:00,  2.39s/it]
-Train Loss: 3.9588, Val Loss: 3.0449, Val Exact Acc: 0.00%, Val Token Acc: 13.90%, Epoch Time: 124.33s
-
-Epoch 2/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:06,  4.58it/s]Training:   9%|▉         | 3/32 [00:00<00:02, 10.02it/s]Training:  16%|█▌        | 5/32 [00:00<00:02, 12.77it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 14.33it/s]Training:  28%|██▊       | 9/32 [00:00<00:01, 15.28it/s]Training:  34%|███▍      | 11/32 [00:00<00:01, 15.94it/s]Training:  41%|████      | 13/32 [00:00<00:01, 16.44it/s]Training:  47%|████▋     | 15/32 [00:01<00:01, 16.77it/s]Training:  53%|█████▎    | 17/32 [00:01<00:00, 17.00it/s]Training:  59%|█████▉    | 19/32 [00:01<00:00, 17.17it/s]Training:  66%|██████▌   | 21/32 [00:01<00:00, 17.30it/s]Training:  72%|███████▏  | 23/32 [00:01<00:00, 17.35it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 17.45it/s]Training:  84%|████████▍ | 27/32 [00:01<00:00, 17.60it/s]Training:  91%|█████████ | 29/32 [00:01<00:00, 17.71it/s]Training:  97%|█████████▋| 31/32 [00:01<00:00, 17.76it/s]Training: 100%|██████████| 32/32 [00:02<00:00, 15.59it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  5.90it/s]Evaluating:  88%|████████▊ | 7/8 [00:00<00:00, 30.63it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 23.08it/s]
-Train Loss: 2.2697, Val Loss: 1.9498, Val Exact Acc: 0.00%, Val Token Acc: 28.54%, Epoch Time: 2.40s
-
-Epoch 3/3
-Training:   0%|          | 0/32 [00:00<?, ?it/s]Training:   3%|▎         | 1/32 [00:00<00:07,  4.39it/s]Training:   9%|▉         | 3/32 [00:00<00:03,  9.53it/s]Training:  16%|█▌        | 5/32 [00:00<00:02, 11.92it/s]Training:  22%|██▏       | 7/32 [00:00<00:01, 13.13it/s]Training:  28%|██▊       | 9/32 [00:00<00:01, 13.63it/s]Training:  34%|███▍      | 11/32 [00:00<00:01, 14.08it/s]Training:  41%|████      | 13/32 [00:01<00:01, 14.43it/s]Training:  47%|████▋     | 15/32 [00:01<00:01, 14.85it/s]Training:  53%|█████▎    | 17/32 [00:01<00:01, 14.99it/s]Training:  59%|█████▉    | 19/32 [00:01<00:00, 15.19it/s]Training:  66%|██████▌   | 21/32 [00:01<00:00, 15.43it/s]Training:  72%|███████▏  | 23/32 [00:01<00:00, 15.56it/s]Training:  78%|███████▊  | 25/32 [00:01<00:00, 15.74it/s]Training:  84%|████████▍ | 27/32 [00:01<00:00, 15.71it/s]Training:  91%|█████████ | 29/32 [00:02<00:00, 15.82it/s]Training:  97%|█████████▋| 31/32 [00:02<00:00, 15.88it/s]Training: 100%|██████████| 32/32 [00:02<00:00, 14.05it/s]
-Evaluating:   0%|          | 0/8 [00:00<?, ?it/s]Evaluating:  12%|█▎        | 1/8 [00:00<00:01,  5.75it/s]Evaluating:  88%|████████▊ | 7/8 [00:00<00:00, 29.47it/s]Evaluating: 100%|██████████| 8/8 [00:00<00:00, 22.51it/s]
-Train Loss: 1.9184, Val Loss: 1.9116, Val Exact Acc: 0.00%, Val Token Acc: 30.05%, Epoch Time: 2.63s
-
-Total Training Time: 129.37s
-
-======================================================================
-TESTING ON RANDOM NEW SAMPLES
-======================================================================
-The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
-This is a friendly reminder - the current text generation call has exceeded the model's predefined maximum length (32). Depending on the model, you may observe exceptions, performance degradation, or nothing at all.
-Input: [0, 33, 13, 9, 14, 30, 47, 62, 59, 14]..., Predicted: [0, 1, 3, 4, 5, 8, 9, 10, 10, 13]..., Expected: [0, 1, 2, 5, 8, 9, 11, 13, 14, 14]..., Token Acc: 6.2%, Exact: ✗
-Input: [26, 10, 63, 64, 50, 59, 36, 19, 4, 55]..., Predicted: [0, 0, 1, 4, 4, 6, 8, 9, 11, 12]..., Expected: [0, 4, 4, 8, 10, 12, 14, 17, 18, 18]..., Token Acc: 3.1%, Exact: ✗
-Input: [21, 44, 64, 23, 52, 41, 7, 36, 7, 32]..., Predicted: [0, 1, 2, 4, 5, 6, 7, 8, 10, 11]..., Expected: [1, 1, 2, 4, 6, 7, 7, 10, 12, 14]..., Token Acc: 12.5%, Exact: ✗
-Input: [8, 54, 1, 35, 16, 9, 51, 45, 20, 59]..., Predicted: [0, 2, 4, 6, 8, 9, 11, 12, 13, 15]..., Expected: [0, 1, 5, 8, 9, 9, 9, 10, 10, 11]..., Token Acc: 9.4%, Exact: ✗
-Input: [17, 56, 51, 23, 28, 10, 32, 1, 62, 51]..., Predicted: [0, 1, 3, 6, 7, 8, 9, 11, 11, 13]..., Expected: [1, 1, 2, 3, 10, 12, 17, 18, 23, 24]..., Token Acc: 3.1%, Exact: ✗
-
-Done.
-===== All models complete. Generating plots... =====
-Plotting from: /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/results/sort_jobs/smoke-test/run_20260315T144155
-Loaded models: ['deltanet', 'gla', 'linear_attention', 'retnet', 'standard']
-Wrote /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/results/sort_jobs/smoke-test/run_20260315T144155/model_comparison_bar.png
-Wrote /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/results/sort_jobs/smoke-test/run_20260315T144155/model_comparison_curves.png
-Wrote /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/results/sort_jobs/smoke-test/run_20260315T144155/model_comparison_exact_acc.png
-Done.
-===== Smoke test finished. Results in /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/results/sort_jobs/smoke-test/run_20260315T144155 =====
