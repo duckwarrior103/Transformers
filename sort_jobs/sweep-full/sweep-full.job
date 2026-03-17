@@ -92,7 +92,7 @@ for MODEL in "${MODEL_LIST[@]}"; do
                 --hidden_size "$HIDDEN_SIZE" \
                 --num_layers  "$NUM_LAYERS" \
                 --num_heads   "$NUM_HEADS" \
-                --results_file "$OUT_CSV" &
+                --results_file "$OUT_CSV" > "$MODEL_DIR/seq_${SEQ}_maxv_${MAXV}.log" 2>&1 &
             BATCH_PIDS+=($!)
             JOB_IDX=$(( JOB_IDX + 1 ))
 

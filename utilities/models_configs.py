@@ -32,12 +32,12 @@ from fla.models import GatedDeltaNetForCausalLM
 
 # Config for standard attention model (e.g. FlashAttention2)
 
-def get_standard_config(vocab_size, seq_length):  
+def get_standard_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):  
     return TransformerConfig(  
         vocab_size=vocab_size,  
-        hidden_size=512,  
-        num_hidden_layers=6,  
-        num_heads=8,  
+        hidden_size=hidden_size,  
+        num_hidden_layers=num_hidden_layers,  
+        num_heads=num_heads,  
         max_position_embeddings=seq_length,  
         pad_token_id=vocab_size - 1,  
         eos_token_id=vocab_size - 1,  

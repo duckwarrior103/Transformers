@@ -50,7 +50,7 @@ for SEQ in "${SEQ_LIST[@]}"; do
             --hidden_size 512 \
             --num_layers 6 \
             --num_heads 8 \
-            --results_file "$OUT_CSV" &
+            --results_file "$OUT_CSV" > "$RUN_DIR/seq_${SEQ}_maxv_${MAXV}.log" 2>&1 &
         BATCH_PIDS+=($!)
         JOB_IDX=$(( JOB_IDX + 1 ))
 

@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # SBATCH directives (converted from srun)
-#SBATCH --partition=gpuA
-#SBATCH --gpus=1
-#SBATCH -c 4
+#SBATCH --partition=gpuL
+#SBATCH --gpus=4
+#SBATCH -c 16
 #SBATCH --ntasks=1
 #SBATCH --time=1-0
 
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-echo "Starting batch GPU job (1x A100, 4 CPU cores, 1 day)..."
+echo "Starting batch GPU job (4x L40s, 4 CPU cores, 1 day)..."
 
 # Load modules (same as original)
 echo 'Loading modules...'
@@ -23,13 +23,10 @@ echo 'Activating virtual environment...'
 source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
 
 # Echo job details
-echo "Job is using $SLURM_GPUS GPU(s) with ID(s) $CUDA_VISIBLE_DEVICES and $SLURM_NTASKS CPU core(s)"
+echo "Job is using $SLURM_GPUS GPU(s) with ID(s) $CUDA_VISIBLE_DEVICES and $SLURM_CPUS_PER_TASK CPU core(s)"
 
 # Running test.py
 echo 'Running test.py'
 echo "===== the following will be job output ===="
-
-# Run your GPU app (absolute path for robustness, replace with actual command if needed)
-python /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/test.py
 
 echo 'Job completed.'

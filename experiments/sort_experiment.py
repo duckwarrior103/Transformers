@@ -53,10 +53,14 @@ LEARNING_RATE = args.lr
 WEIGHT_DECAY = args.weight_decay
 
 MODEL_TYPE = args.model_type
+NUM_LAYERS = args.num_layers
+NUM_HEADS = args.num_heads
+HIDDEN_SIZE = args.hidden_size
 
-print(f"Config: seq_length={SEQUENCE_LENGTH}, vocab_size={VOCAB_SIZE}, "
+print(f"Task: Sorting {SEQUENCE_LENGTH} integers in range [0, {MAX_VALUE})"
+      f"Config: seq_length={SEQUENCE_LENGTH}, vocab_size={VOCAB_SIZE}, "
       f"train_examples={TRAIN_EXAMPLES}, epochs={EPOCHS}, lr={LEARNING_RATE}, "
-      f"hidden_size={args.hidden_size}")
+      f"hidden_size={HIDDEN_SIZE}, num_layers={NUM_LAYERS}, num_heads={NUM_HEADS}, model_type={MODEL_TYPE}")
 
 # ============================================================================
 # CSV Logging
@@ -123,7 +127,7 @@ val_loader = DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=False, 
 
 model_creator_dict = get_models_creator_dict()
 model_config, model_class = model_creator_dict[MODEL_TYPE]
-model = model_class(model_config(VOCAB_SIZE, SEQUENCE_LENGTH))
+model = model_class(model_config(VOCAB_SIZE, SEQUENCE_LENGTH, HIDDEN_SIZE, NUM_LAYERS, NUM_HEADS))
 model = model.to(device=device, dtype=torch.bfloat16)
 model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
