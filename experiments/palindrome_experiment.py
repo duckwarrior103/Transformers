@@ -26,8 +26,8 @@ print()
 # ============================================================================
 parser = argparse.ArgumentParser(description="Train a transformer for sorting task.")
 parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet"], help="Type of model to train")
-parser.add_argument("--seq_length", type=int, default=256)
-parser.add_argument("--num_data_tokens", type=int, default=64)
+parser.add_argument("--seq_length", type=int, default=1024)
+parser.add_argument("--max_value", type=int, default=4096)
 parser.add_argument("--train_examples", type=int, default=50000)
 parser.add_argument("--val_examples", type=int, default=20000)
 parser.add_argument("--batch_size", type=int, default=256)
@@ -40,13 +40,11 @@ parser.add_argument("--num_heads", type=int, default=8)
 parser.add_argument("--results_file", type=str, default="", help="Path to CSV file for logging per-epoch results")
 args = parser.parse_args()
 
-# Model hyperparameters 
-MODEL_TYPE = args.model_type
-NUM_LAYERS = args.num_layers
-NUM_HEADS = args.num_heads
-HIDDEN_SIZE = args.hidden_size
+MAX_VALUE = args.max_value
+EOS_TOKEN = MAX_VALUE + 1
+VOCAB_SIZE = EOS_TOKEN + 1
 
-# Training hyperparameters
+SEQUENCE_LENGTH = args.seq_length
 TRAIN_EXAMPLES = args.train_examples
 VAL_EXAMPLES = args.val_examples
 BATCH_SIZE = args.batch_size
@@ -54,15 +52,12 @@ EPOCHS = args.epochs
 LEARNING_RATE = args.lr
 WEIGHT_DECAY = args.weight_decay
 
-# Task and tokenizer
-SEQUENCE_LENGTH = args.seq_length
+MODEL_TYPE = args.model_type
+NUM_LAYERS = args.num_layers
+NUM_HEADS = args.num_heads
+HIDDEN_SIZE = args.hidden_size
 
-NUM_DATA_TOKENS = args.num_data_tokens # e.g. 64 means integers in range 0-63, 64 tokens
-SEP_TOKEN = NUM_DATA_TOKENS # 0-63 for data, 64 for separator, 65 for EOS
-EOS_TOKEN = NUM_DATA_TOKENS + 1
-VOCAB_SIZE = NUM_DATA_TOKENS + 2 # data tokens + separator + EOS
-
-print(f"Task: Sorting {SEQUENCE_LENGTH} integers in range [0, {NUM_DATA_TOKENS-1}])"
+print(f"Task: Palindrome {SEQUENCE_LENGTH} integers in range [0, {MAX_VALUE})"
       f"Config: seq_length={SEQUENCE_LENGTH}, vocab_size={VOCAB_SIZE}, "
       f"train_examples={TRAIN_EXAMPLES}, epochs={EPOCHS}, lr={LEARNING_RATE}, "
       f"hidden_size={HIDDEN_SIZE}, num_layers={NUM_LAYERS}, num_heads={NUM_HEADS}, model_type={MODEL_TYPE}")
@@ -88,7 +83,7 @@ def log_epoch(filepath, epoch, train_loss, val_loss, token_acc, exact_acc, epoch
         writer.writerow([
             epoch, MODEL_TYPE, f"{train_loss:.6f}", f"{val_loss:.6f}",
             f"{token_acc:.6f}", f"{exact_acc:.6f}", f"{epoch_time:.2f}",
-            SEQUENCE_LENGTH, NUM_DATA_TOKENS, TRAIN_EXAMPLES,
+            SEQUENCE_LENGTH, VOCAB_SIZE, TRAIN_EXAMPLES,
             args.hidden_size, args.num_layers, args.num_heads,
             LEARNING_RATE, BATCH_SIZE
         ])
@@ -99,31 +94,35 @@ if args.results_file:
 # ============================================================================
 # Dataset
 # ============================================================================
-class SortingDataset(Dataset):
-    def __init__(self, num_examples, seq_length, num_data_tokens):
+class PalindromeDataset(Dataset):
+    def __init__(self, num_examples, seq_length, max_value):
         self.num_examples = num_examples
         self.seq_length = seq_length
-        self.num_data_tokens = num_data_tokens
+        self.max_value = max_value
 
     def __len__(self):
         return self.num_examples
 
     def __getitem__(self, idx):
-        # Create input list and sorted list
-        numbers = torch.randint(0, self.num_data_tokens, (self.seq_length,))
-        sorted_numbers = torch.sort(numbers).values
+        # Generate random sequence of integers
+        numbers = torch.randint(0, self.max_value, (self.seq_length,))
+        # Reverse the sequence of numbers for target 
+        reversed_numbers = torch.flip(numbers, dims=[0])
 
-        full_seq = torch.cat([numbers, torch.tensor([SEP_TOKEN]), sorted_numbers, torch.tensor([EOS_TOKEN])])
+        # Concatenate full sequence with EOS token in between and at the end
+        input_seq = torch.cat([numbers, torch.tensor([EOS_TOKEN])])
+        target_seq = torch.cat([reversed_numbers, torch.tensor([EOS_TOKEN])])
+        full_seq = torch.cat([input_seq, target_seq])
+
+        # Input IDs are the full sequence, but mask the labels for the first half
         input_ids = full_seq.clone()
         labels = full_seq.clone()
-        
-        # Mask out the input part of the sequence in the labels to ignore it during loss calculation
-        labels[:SEQUENCE_LENGTH+1] = -100
+        labels[:len(input_seq)] = -100
 
         return input_ids, labels
 
-train_dataset = SortingDataset(TRAIN_EXAMPLES, SEQUENCE_LENGTH, NUM_DATA_TOKENS)
-val_dataset = SortingDataset(VAL_EXAMPLES, SEQUENCE_LENGTH, NUM_DATA_TOKENS)
+train_dataset = PalindromeDataset(TRAIN_EXAMPLES, SEQUENCE_LENGTH, MAX_VALUE)
+val_dataset = PalindromeDataset(VAL_EXAMPLES, SEQUENCE_LENGTH, MAX_VALUE)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 _T = 2 * SEQUENCE_LENGTH + 2
 eval_batch_size = min(BATCH_SIZE, max(1, (4 * 1024 * 1024 * 1024) // (_T * VOCAB_SIZE * 2)))
@@ -168,16 +167,8 @@ def train_epoch():
 
 def evaluate():
     model.eval()
-    total_loss = 0
-    correct_sequences = 0
-    total_sequences = 0
-    correct_tokens = 0
-    total_tokens = 0
-
-    # Slice definitions based on sequence layout:
-    # [input (seq_length) | SEP | sorted (seq_length) | EOS]
-    pred_slice = slice(SEQUENCE_LENGTH, 2 * SEQUENCE_LENGTH)      # model predicts next token
-    target_slice = slice(SEQUENCE_LENGTH + 1, 2 * SEQUENCE_LENGTH + 1)  # ground truth sorted region
+    
+    total_loss, correct_sequences, total_sequences, correct_tokens, total_tokens = 0, 0, 0, 0, 0
 
     with torch.no_grad():
         for input_ids, labels in tqdm(val_loader, desc="Evaluating"):
@@ -185,16 +176,20 @@ def evaluate():
             with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                 outputs = model(input_ids=input_ids, labels=labels)
                 total_loss += outputs.loss.item()
+            logits = outputs.logits
+            predictions = torch.argmax(logits, dim=-1)
+            start_idx = SEQUENCE_LENGTH
+            end_idx = start_idx + SEQUENCE_LENGTH
 
-            predictions = outputs.logits.argmax(dim=-1)
-            predicted_sorted = predictions[:, pred_slice]
-            expected_sorted = input_ids[:, target_slice]
-
-            correct_tokens += (predicted_sorted == expected_sorted).sum().item()
-            total_tokens += predicted_sorted.numel()
-            correct_sequences += (predicted_sorted == expected_sorted).all(dim=1).sum().item()
-            total_sequences += predicted_sorted.size(0)
-
+            # Compare predicted reversed sequence to expected reversed sequence
+            predicted_reversed = predictions[:, start_idx:end_idx] 
+            expected_reversed = input_ids[:, start_idx + 1:end_idx + 1]
+            correct_tokens += (predicted_reversed == expected_reversed).sum().item()
+            total_tokens += predicted_reversed.numel()
+            for i in range(predicted_reversed.size(0)):
+                if torch.equal(predicted_reversed[i], expected_reversed[i]):
+                    correct_sequences += 1
+            total_sequences += predicted_reversed.size(0)
     return total_loss / len(val_loader), correct_sequences / total_sequences, correct_tokens / total_tokens
 
 # ============================================================================
@@ -228,20 +223,16 @@ print("\n" + "="*70)
 print("TESTING ON RANDOM NEW SAMPLES")
 print("="*70)
 for _ in range(5):
-    nums = [random.randint(0, NUM_DATA_TOKENS-1) for _ in range(SEQUENCE_LENGTH)]
-    input_ids = torch.tensor([nums + [SEP_TOKEN]], device=device)
+    nums = [random.randint(0, MAX_VALUE) for _ in range(SEQUENCE_LENGTH)]
+    input_ids = torch.tensor([nums + [EOS_TOKEN]], device=device)
     with torch.no_grad():
         output = model.generate(input_ids=input_ids, max_new_tokens=SEQUENCE_LENGTH + 1, do_sample=False, eos_token_id=EOS_TOKEN)
     predicted = output[0, len(nums) + 1:].tolist()
     if EOS_TOKEN in predicted:
         predicted = predicted[:predicted.index(EOS_TOKEN)]
-    expected = sorted(nums)
+    expected = reversed(nums)
     token_acc = sum(p == t for p, t in zip(predicted, expected)) / SEQUENCE_LENGTH * 100
     exact = predicted == expected
-    print(f"  Input:     {nums}")
-    print(f"  Predicted: {predicted}")
-    print(f"  Expected:  {expected}")
-    print(f"  Token Acc: {token_acc:.1f}%, Exact: {'✓' if exact else '✗'}")
-    print()
+    print(f"Input: {nums[:10]}..., Predicted: {predicted[:10]}..., Expected: {expected[:10]}..., Token Acc: {token_acc:.1f}%, Exact: {'✓' if exact else '✗'}")
 
 print("\nDone.")

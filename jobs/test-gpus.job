@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# SBATCH directives (converted from srun)
 #SBATCH --partition=gpuL
 #SBATCH --gpus=4
 #SBATCH -c 16
 #SBATCH --ntasks=1
 #SBATCH --time=1-0
+#SBATCH --output=/dev/null
 
 # Exit immediately if a command exits with a non-zero status
 set -e
@@ -24,9 +24,5 @@ source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/b
 
 # Echo job details
 echo "Job is using $SLURM_GPUS GPU(s) with ID(s) $CUDA_VISIBLE_DEVICES and $SLURM_CPUS_PER_TASK CPU core(s)"
-
-# Running test.py
-echo 'Running test.py'
-echo "===== the following will be job output ===="
 
 echo 'Job completed.'
