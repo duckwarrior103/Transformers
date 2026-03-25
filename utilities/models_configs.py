@@ -52,12 +52,12 @@ def get_standard_config(vocab_size, seq_length, hidden_size=128, num_hidden_laye
     )
 
 # Config for linear attention model (e.g. FlashAttention2)
-def get_linear_attention_config(vocab_size, seq_length):  
-    return LinearAttentionConfig(  
-        vocab_size=vocab_size,  
-        hidden_size=512,  
-        num_hidden_layers=6,  
-        num_heads=8,  
+def get_linear_attention_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
+    return LinearAttentionConfig(
+        vocab_size=vocab_size,
+        hidden_size=hidden_size,
+        num_hidden_layers=num_hidden_layers,
+        num_heads=num_heads,  
         max_position_embeddings=seq_length,  
         pad_token_id=vocab_size - 1,  
         eos_token_id=vocab_size - 1,  
@@ -71,12 +71,12 @@ def get_linear_attention_config(vocab_size, seq_length):
         fuse_linear_cross_entropy=False,  
     )
 
-def get_gla_config(vocab_size, seq_length):
+def get_gla_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
     return GLAConfig(
         vocab_size=vocab_size,
-        hidden_size=512,
-        num_hidden_layers=6,
-        num_heads=8,
+        hidden_size=hidden_size,
+        num_hidden_layers=num_hidden_layers,
+        num_heads=num_heads,
         max_position_embeddings=seq_length,
         pad_token_id=vocab_size - 1,
         eos_token_id=vocab_size - 1,
@@ -90,13 +90,12 @@ def get_gla_config(vocab_size, seq_length):
         fuse_linear_cross_entropy=False,
     )
 
-def get_retnet_config(vocab_size, seq_length):  
-
-    return RetNetConfig(  
-        vocab_size=vocab_size,  
-        hidden_size=512,  
-        num_hidden_layers=6,  
-        num_heads=8,  
+def get_retnet_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
+    return RetNetConfig(
+        vocab_size=vocab_size,
+        hidden_size=hidden_size,
+        num_hidden_layers=num_hidden_layers,
+        num_heads=num_heads,  
         max_position_embeddings=seq_length,  
         pad_token_id=vocab_size - 1,  
         eos_token_id=vocab_size - 1,  
@@ -111,12 +110,12 @@ def get_retnet_config(vocab_size, seq_length):
     )
 
 
-def get_deltanet_config(vocab_size, seq_length):
+def get_deltanet_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
     return DeltaNetConfig(
         vocab_size=vocab_size,
-        hidden_size=512,
-        num_hidden_layers=6,
-        num_heads=8,
+        hidden_size=hidden_size,
+        num_hidden_layers=num_hidden_layers,
+        num_heads=num_heads,
         max_position_embeddings=seq_length,
         pad_token_id=vocab_size - 1,
         eos_token_id=vocab_size - 1,
@@ -131,13 +130,12 @@ def get_deltanet_config(vocab_size, seq_length):
     )
 
 
-def get_gated_deltanet_config(vocab_size, seq_length):
+def get_gated_deltanet_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
     return GatedDeltaNetConfig(
         vocab_size=vocab_size,
-        hidden_size=512,
-        num_hidden_layers=6,
-        head_dim=64,
-        num_heads=8,
+        hidden_size=hidden_size,
+        num_hidden_layers=num_hidden_layers,
+        num_heads=num_heads,
         max_position_embeddings=seq_length,
         pad_token_id=vocab_size - 1,
         eos_token_id=vocab_size - 1,

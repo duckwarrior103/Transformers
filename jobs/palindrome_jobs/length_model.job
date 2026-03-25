@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpuL
+#SBATCH --partition=gpuA
 #SBATCH --gpus=4
 #SBATCH -c 8
 #SBATCH --ntasks=1
@@ -22,10 +22,11 @@ export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 
 # Configuration
 MODELS=(standard linear_attention gla retnet deltanet gated_deltanet)
+NUM_DATA_TOKENS=16
 
 # Create a unique run directory based on the current date and time
 RUN_ID="run_$(date +%Y-%m-%d_%H-%M-%S)"
-RUN_DIR="$BASE/results/sort_jobs/length_model/$RUN_ID"
+RUN_DIR="$BASE/results/palindrome_jobs/length_model/$RUN_ID"
 
 # Create directories for data and logs, and redirect output to a log file
 mkdir -p "$RUN_DIR/logs"
@@ -69,10 +70,10 @@ for MODEL in "${MODELS[@]}"; do
         unset 'FREE_GPUS[$last]'
 
         echo "===== model=$MODEL seq_length=$SEQ (gpu=$GPU_ID) ====="
-        CUDA_VISIBLE_DEVICES=$GPU_ID python -u "$BASE/experiments/sort_experiment.py" \
+        CUDA_VISIBLE_DEVICES=$GPU_ID python -u "$BASE/experiments/palindrome_experiment.py" \
             --model_type $MODEL \
             --seq_length $SEQ \
-            --num_data_tokens $SEQ \
+            --num_data_tokens $NUM_DATA_TOKENS \
             --train_examples 50000 \
             --val_examples 5000 \
             --batch_size 256 \
@@ -115,6 +116,6 @@ done
 echo "Merged test results -> $MERGED"
 
 echo "Plotting Graphs"
-python -u "$BASE/results/sort_jobs/length_model/plot.py" "$RUN_DIR"
+python -u "$BASE/results/palindrome_jobs/length_model/plot.py" "$RUN_DIR"
 
 echo "Finished Plotting Graphs"

@@ -37,6 +37,7 @@ parser.add_argument("--weight_decay", type=float, default=0.01)
 parser.add_argument("--hidden_size", type=int, default=512)
 parser.add_argument("--num_layers", type=int, default=6)
 parser.add_argument("--num_heads", type=int, default=8)
+parser.add_argument("--test_results_file", type=str, default="", help="Path to CSV file for logging final test results")
 parser.add_argument("--results_file", type=str, default="", help="Path to CSV file for logging per-epoch results")
 args = parser.parse_args()
 
@@ -93,6 +94,23 @@ def log_epoch(filepath, epoch, train_loss, val_loss, token_acc, exact_acc, epoch
             LEARNING_RATE, BATCH_SIZE
         ])
 
+def log_test_results(filepath, gen_token_acc, gen_exact_acc):
+    if not filepath:
+        return
+    # Check if file exists to determine if we write header
+    file_exists = os.path.isfile(filepath)
+    with open(filepath, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow([
+                "model_type", "seq_length", "num_data_tokens", "final_token_acc", "final_exact_acc", 
+                "hidden_size", "num_layers", "num_heads"
+            ])
+        writer.writerow([
+            MODEL_TYPE, SEQUENCE_LENGTH, NUM_DATA_TOKENS, f"{gen_token_acc:.6f}", f"{gen_exact_acc:.6f}",
+            args.hidden_size, args.num_layers, args.num_heads
+        ])
+
 if args.results_file:
     init_csv(args.results_file)
 
@@ -135,7 +153,7 @@ val_loader = DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=False, 
 
 model_creator_dict = get_models_creator_dict()
 model_config, model_class = model_creator_dict[MODEL_TYPE]
-model = model_class(model_config(VOCAB_SIZE, SEQUENCE_LENGTH, HIDDEN_SIZE, NUM_LAYERS, NUM_HEADS))
+model = model_class(model_config(VOCAB_SIZE, 2 * SEQUENCE_LENGTH + 2, HIDDEN_SIZE, NUM_LAYERS, NUM_HEADS))
 model = model.to(device=device, dtype=torch.bfloat16)
 model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
@@ -223,25 +241,80 @@ for epoch in range(EPOCHS):
 total_time = time.time() - start_time
 print(f"\nTotal Training Time: {total_time:.2f}s")
 
-# Final testing
+# Final testing with autoregressive generation (batched)
+TEST_EXAMPLES = 5000
+TEST_BATCH_SIZE = 128
+DISPLAY_SAMPLES = 5
+
 print("\n" + "="*70)
-print("TESTING ON RANDOM NEW SAMPLES")
+print(f"AUTOREGRESSIVE TEST ON {TEST_EXAMPLES} RANDOM SAMPLES")
 print("="*70)
-for _ in range(5):
-    nums = [random.randint(0, NUM_DATA_TOKENS-1) for _ in range(SEQUENCE_LENGTH)]
-    input_ids = torch.tensor([nums + [SEP_TOKEN]], device=device)
+
+model.eval()
+total_exact = 0
+total_token_correct = 0
+total_tokens = 0
+samples_seen = 0
+
+# Pre-generate all test inputs
+all_inputs = torch.randint(0, NUM_DATA_TOKENS, (TEST_EXAMPLES, SEQUENCE_LENGTH))
+all_expected = torch.sort(all_inputs, dim=1).values
+# Append SEP token to form prompts: [input | SEP]
+sep_col = torch.full((TEST_EXAMPLES, 1), SEP_TOKEN, dtype=torch.long)
+all_prompts = torch.cat([all_inputs, sep_col], dim=1)
+
+for start in tqdm(range(0, TEST_EXAMPLES, TEST_BATCH_SIZE), desc="Testing (generate)"):
+    end = min(start + TEST_BATCH_SIZE, TEST_EXAMPLES)
+    batch_prompts = all_prompts[start:end].to(device)
+    batch_expected = all_expected[start:end]
+
     with torch.no_grad():
-        output = model.generate(input_ids=input_ids, max_new_tokens=SEQUENCE_LENGTH + 1, do_sample=False, eos_token_id=EOS_TOKEN)
-    predicted = output[0, len(nums) + 1:].tolist()
-    if EOS_TOKEN in predicted:
-        predicted = predicted[:predicted.index(EOS_TOKEN)]
-    expected = sorted(nums)
-    token_acc = sum(p == t for p, t in zip(predicted, expected)) / SEQUENCE_LENGTH * 100
-    exact = predicted == expected
-    print(f"  Input:     {nums}")
-    print(f"  Predicted: {predicted}")
-    print(f"  Expected:  {expected}")
-    print(f"  Token Acc: {token_acc:.1f}%, Exact: {'✓' if exact else '✗'}")
-    print()
+        outputs = model.generate(
+            input_ids=batch_prompts,
+            attention_mask=torch.ones_like(batch_prompts),
+            max_new_tokens=SEQUENCE_LENGTH + 1,
+            do_sample=False,
+            eos_token_id=EOS_TOKEN,
+        )
+
+    # Extract predicted sorted region: everything after the prompt
+    predicted_region = outputs[:, SEQUENCE_LENGTH + 1:]
+
+    for j in range(end - start):
+        pred = predicted_region[j].tolist()
+        if EOS_TOKEN in pred:
+            pred = pred[:pred.index(EOS_TOKEN)]
+        expected = batch_expected[j].tolist()
+
+        # Pad/truncate for token accuracy
+        pred_padded = (pred + [-1] * SEQUENCE_LENGTH)[:SEQUENCE_LENGTH]
+        token_matches = sum(p == t for p, t in zip(pred_padded, expected))
+        exact = pred == expected
+
+        total_token_correct += token_matches
+        total_tokens += SEQUENCE_LENGTH
+        total_exact += int(exact)
+
+        if samples_seen < DISPLAY_SAMPLES:
+            inp = all_inputs[start + j].tolist()
+            token_acc = token_matches / SEQUENCE_LENGTH * 100
+            print(f"\n  Sample {samples_seen+1}:")
+            print(f"  Input:     {inp}")
+            print(f"  Predicted: {pred}")
+            print(f"  Expected:  {expected}")
+            print(f"  Token Acc: {token_acc:.1f}%, Exact: {'✓' if exact else '✗'}")
+        samples_seen += 1
+
+gen_token_acc = total_token_correct / total_tokens
+gen_exact_acc = total_exact / TEST_EXAMPLES
+print(f"\n{'='*70}")
+print(f"GENERATION RESULTS ({TEST_EXAMPLES} samples):")
+print(f"  Token Accuracy: {gen_token_acc*100:.2f}%")
+print(f"  Exact Accuracy: {gen_exact_acc*100:.2f}%")
+print(f"{'='*70}")
+
+
+print("LOGGING FINAL TEST RESULTS TO CSV: {args.test_results_file}")
+log_test_results(args.test_results_file, gen_token_acc, gen_exact_acc)
 
 print("\nDone.")

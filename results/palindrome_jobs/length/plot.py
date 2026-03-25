@@ -1,4 +1,4 @@
-"""Plot sweep-seq-length results.
+"""Plot palindrome seq-length sweep results.
 
 Reads:
   - data/seq_<N>.csv files from a run directory (per-epoch logs)
@@ -51,6 +51,18 @@ def load_all_epochs(run_dir):
     return all_data
 
 
+def get_num_data_tokens(all_data, tdf):
+    """Extract num_data_tokens from available data."""
+    # Try per-epoch CSVs first (column is 'vocab_size' which holds num_data_tokens)
+    for df in all_data.values():
+        if "vocab_size" in df.columns:
+            return int(df["vocab_size"].iloc[0])
+    # Try test results CSV
+    if tdf is not None and "num_data_tokens" in tdf.columns:
+        return int(tdf["num_data_tokens"].iloc[0])
+    return None
+
+
 def load_run_final_from_epochs(all_data):
     """Return DataFrame with one row per sequence length, final-epoch values."""
     records = []
@@ -80,8 +92,6 @@ def load_test_results(run_dir):
     if df.empty:
         return None
 
-    # Expected columns in your writer:
-    # model_type, seq_length, final_token_acc, final_exact_acc, hidden_size, num_layers, num_heads
     if "seq_length" not in df.columns:
         print(f"  Warning: {fp} missing 'seq_length' column; columns={list(df.columns)}")
         return None
@@ -150,34 +160,40 @@ def main():
 
     # ---- Per-epoch plots from seq_<N>.csv ----
     all_data = load_all_epochs(run_dir)
+
+    # ---- Generation test plots from merged test_results.csv ----
+    tdf = load_test_results(run_dir)
+
+    # ---- Determine num_data_tokens for titles ----
+    ndt = get_num_data_tokens(all_data, tdf)
+    ndt_str = f" (num_data_tokens={ndt})" if ndt is not None else ""
+
     if all_data:
         print(f"Loaded {len(all_data)} sequence lengths (epoch logs)")
         rdf_epochs = load_run_final_from_epochs(all_data)
 
         plot_epoch_metric(all_data, graphs_dir, "token_acc", "Token Accuracy (%)",
-                          "Token Accuracy per Epoch (teacher-forced)", "epoch_token_acc.png", scale=100)
+                          f"Palindrome — Token Accuracy per Epoch (teacher-forced){ndt_str}", "epoch_token_acc.png", scale=100)
         plot_epoch_metric(all_data, graphs_dir, "exact_acc", "Exact Accuracy (%)",
-                          "Exact Accuracy per Epoch (teacher-forced)", "epoch_exact_acc.png", scale=100)
+                          f"Palindrome — Exact Accuracy per Epoch (teacher-forced){ndt_str}", "epoch_exact_acc.png", scale=100)
         plot_epoch_metric(all_data, graphs_dir, "train_loss", "Train Loss",
-                          "Train Loss per Epoch", "epoch_train_loss.png")
+                          f"Palindrome — Train Loss per Epoch{ndt_str}", "epoch_train_loss.png")
         plot_epoch_metric(all_data, graphs_dir, "val_loss", "Val Loss",
-                          "Val Loss per Epoch", "epoch_val_loss.png")
+                          f"Palindrome — Val Loss per Epoch{ndt_str}", "epoch_val_loss.png")
 
         plot_metric(rdf_epochs, graphs_dir, "seq_length", "exact_acc", "Exact Accuracy (%)",
-                    "Seq-Length Sweep — Exact Accuracy vs Seq Length (teacher-forced)",
+                    f"Palindrome Seq-Length Sweep — Exact Accuracy vs Seq Length (teacher-forced){ndt_str}",
                     "exact_acc.png", scale=100)
         plot_metric(rdf_epochs, graphs_dir, "seq_length", "token_acc", "Token Accuracy (%)",
-                    "Seq-Length Sweep — Token Accuracy vs Seq Length (teacher-forced)",
+                    f"Palindrome Seq-Length Sweep — Token Accuracy vs Seq Length (teacher-forced){ndt_str}",
                     "token_acc.png", scale=100)
         plot_metric(rdf_epochs, graphs_dir, "seq_length", "train_loss", "Train Loss",
-                    "Seq-Length Sweep — Train Loss vs Seq Length", "train_loss.png", scale=1.0)
+                    f"Palindrome Seq-Length Sweep — Train Loss vs Seq Length{ndt_str}", "train_loss.png", scale=1.0)
         plot_metric(rdf_epochs, graphs_dir, "seq_length", "val_loss", "Val Loss",
-                    "Seq-Length Sweep — Val Loss vs Seq Length", "val_loss.png", scale=1.0)
+                    f"Palindrome Seq-Length Sweep — Val Loss vs Seq Length{ndt_str}", "val_loss.png", scale=1.0)
     else:
         print("No per-epoch result CSVs found (data/seq_*.csv). Skipping epoch/val-loss plots.")
 
-    # ---- Generation test plots from merged test_results.csv ----
-    tdf = load_test_results(run_dir)
     if tdf is None:
         print("No merged test results found (data/test_results.csv).")
     else:
@@ -185,13 +201,13 @@ def main():
         if "final_exact_acc" in tdf.columns:
             plot_metric(
                 tdf, graphs_dir, "seq_length", "final_exact_acc", "Final Exact Accuracy (%)",
-                "Seq-Length Sweep — Final Exact Accuracy vs Seq Length (generate)",
+                f"Palindrome Seq-Length Sweep — Final Exact Accuracy vs Seq Length (generate){ndt_str}",
                 "final_exact_acc.png", scale=100
             )
         if "final_token_acc" in tdf.columns:
             plot_metric(
                 tdf, graphs_dir, "seq_length", "final_token_acc", "Final Token Accuracy (%)",
-                "Seq-Length Sweep — Final Token Accuracy vs Seq Length (generate)",
+                f"Palindrome Seq-Length Sweep — Final Token Accuracy vs Seq Length (generate){ndt_str}",
                 "final_token_acc.png", scale=100
             )
 
