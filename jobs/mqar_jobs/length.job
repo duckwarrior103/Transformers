@@ -1,0 +1,111 @@
+#!/bin/bash
+
+#SBATCH --partition=gpuL
+#SBATCH --gpus=4
+#SBATCH -c 8
+#SBATCH --ntasks=1
+#SBATCH --time=1-0
+#SBATCH --output=/dev/null
+
+set -e
+
+# Load necessary modules and activate the virtual environment
+module load apps/binapps/conda/miniforge3/25.9.1
+module load libs/cuda/12.4.1
+module load apps/binapps/pytorch/2.6.0-312-gpu-cu124
+
+source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/bin/activate
+
+# Set base path and PYTHONPATH for the project
+BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
+export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
+
+# Configuration
+MODEL="standard"
+NUM_DATA_TOKENS=1024
+
+# Create a unique run directory based on the current date and time
+RUN_ID="run_$(date +%Y-%m-%d_%H-%M-%S)"
+RUN_DIR="$BASE/results/mqar_jobs/length/$RUN_ID"
+
+# Create directories for data and logs, and redirect output to a log file
+mkdir -p "$RUN_DIR/data"
+mkdir -p "$RUN_DIR/logs"
+exec > >(tee -a "$RUN_DIR/logs/output.log") 2>&1
+
+# Initialize an array to hold background process IDs
+declare -a RUNNING_PIDS=()
+# Initialize an array to track free GPUs (0, 1, 2, 3)
+declare -a FREE_GPUS=(0 1 2 3)
+declare -A PID_TO_GPU=()
+
+for SEQ in 8 16 32 64 128 256 512; do
+    # Block until there are fewer than 4 background processes running
+    while [ ${#FREE_GPUS[@]} -eq 0 ]; do
+        wait -n || true
+
+        new_running_pids=()
+        # Check all running PIDs
+        for pid in "${RUNNING_PIDS[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                new_running_pids+=("$pid")
+            else
+                # Free the GPU associated with the finished process
+                gpu_id="${PID_TO_GPU[$pid]}"
+                FREE_GPUS+=("$gpu_id")
+
+                # Remove the process-GPU mapping
+                unset PID_TO_GPU["$pid"]
+            fi
+        done
+        RUNNING_PIDS=("${new_running_pids[@]}")
+    done
+
+    # Take one free GPU (last element)
+    last=$(( ${#FREE_GPUS[@]} - 1 ))
+    GPU_ID="${FREE_GPUS[$last]}"
+    unset 'FREE_GPUS[$last]'
+
+    echo "===== seq_length=$SEQ (gpu=$GPU_ID) ====="
+    CUDA_VISIBLE_DEVICES=$GPU_ID python -u "$BASE/experiments/mqar_experiment.py" \
+        --model_type $MODEL \
+        --seq_length $SEQ \
+        --num_data_tokens $NUM_DATA_TOKENS \
+        --train_examples 100000 \
+        --val_examples 5000 \
+        --batch_size 256 \
+        --epochs 8 \
+        --lr 0.0003 \
+        --hidden_size 128 \
+        --num_layers 2 \
+        --num_heads 2 \
+        --test_results_file "$RUN_DIR/data/test_results_seq_${SEQ}.csv" \
+        --results_file "$RUN_DIR/data/seq_${SEQ}.csv" > "$RUN_DIR/logs/seq_${SEQ}.log" 2>&1 &
+
+    NEW_PID=$!
+    RUNNING_PIDS+=("$NEW_PID")
+    PID_TO_GPU["$NEW_PID"]="$GPU_ID"
+
+done
+
+# Wait for all remaining background processes to finish
+for pid in "${RUNNING_PIDS[@]}"; do wait "$pid" || true; done
+
+echo "All sequence length sweeps completed."
+
+MERGED="$RUN_DIR/data/test_results.csv"
+echo "Merging individual test result CSVs into $MERGED"
+
+first_file="$(ls -1 "$RUN_DIR"/data/test_results_seq_*.csv 2>/dev/null | head -n 1)"
+if [ -n "$first_file" ]; then
+    head -n 1 "$first_file" > "$MERGED"
+    for f in "$RUN_DIR"/data/test_results_seq_*.csv; do
+        tail -n +2 "$f" >> "$MERGED"
+    done
+fi
+
+echo "Merged test results -> $MERGED"
+
+echo "Plotting Graphs"
+python -u "$BASE/results/mqar_jobs/length/plot.py"
+echo "Finished Plotting Graphs"

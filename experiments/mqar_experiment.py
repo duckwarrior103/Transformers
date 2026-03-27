@@ -6,6 +6,7 @@ from fla.models import TransformerConfig, TransformerForCausalLM
 from tqdm import tqdm
 from transformers import get_cosine_schedule_with_warmup
 import random
+import numpy as np
 import argparse
 import time
 import csv
@@ -24,10 +25,10 @@ print()
 # ============================================================================
 # Argument Parsing
 # ============================================================================
-parser = argparse.ArgumentParser(description="Train a transformer for sorting task.")
+parser = argparse.ArgumentParser(description="Train a transformer for MQAR (Multi-Query Associative Recall) task.")
 parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet", "gead"], help="Type of model to train")
-parser.add_argument("--seq_length", type=int, default=256)
-parser.add_argument("--num_data_tokens", type=int, default=64)
+parser.add_argument("--seq_length", type=int, default=64)
+parser.add_argument("--num_data_tokens", type=int, default=1024)
 parser.add_argument("--train_examples", type=int, default=50000)
 parser.add_argument("--val_examples", type=int, default=20000)
 parser.add_argument("--batch_size", type=int, default=256)
@@ -41,7 +42,7 @@ parser.add_argument("--test_results_file", type=str, default="", help="Path to C
 parser.add_argument("--results_file", type=str, default="", help="Path to CSV file for logging per-epoch results")
 args = parser.parse_args()
 
-# Model hyperparameters 
+# Model hyperparameters
 MODEL_TYPE = args.model_type
 NUM_LAYERS = args.num_layers
 NUM_HEADS = args.num_heads
@@ -58,14 +59,26 @@ WEIGHT_DECAY = args.weight_decay
 # Task and tokenizer
 SEQUENCE_LENGTH = args.seq_length
 
-NUM_DATA_TOKENS = args.num_data_tokens # e.g. 64 means integers in range 0-63, 64 tokens
-SEP_TOKEN = NUM_DATA_TOKENS # 0-63 for data, 64 for separator, 65 for EOS
-EOS_TOKEN = NUM_DATA_TOKENS + 1
-VOCAB_SIZE = NUM_DATA_TOKENS + 2 # data tokens + separator + EOS
+NUM_DATA_TOKENS = args.num_data_tokens
+NUM_KEYS = NUM_DATA_TOKENS // 2          # keys:   [0, NUM_KEYS)
+NUM_VALUES = NUM_DATA_TOKENS - NUM_KEYS  # values: [NUM_KEYS, NUM_DATA_TOKENS)
+SEP_TOKEN = NUM_DATA_TOKENS              # separator token
+VOCAB_SIZE = NUM_DATA_TOKENS + 1         # data tokens + separator (no EOS)
 
-print(f"Task: Sorting {SEQUENCE_LENGTH} integers in range [0, {NUM_DATA_TOKENS-1}])"
-      f"Config: seq_length={SEQUENCE_LENGTH}, vocab_size={VOCAB_SIZE}, "
-      f"train_examples={TRAIN_EXAMPLES}, epochs={EPOCHS}, lr={LEARNING_RATE}, "
+# Derived MQAR dimensions
+NUM_KV_PAIRS = SEQUENCE_LENGTH // 4
+NUM_QUERIES = NUM_KV_PAIRS // 2
+TOTAL_TOKENS = 2 * NUM_KV_PAIRS + 1 + 2 * NUM_QUERIES  # actual sequence length
+
+assert NUM_KV_PAIRS > 0, f"seq_length={SEQUENCE_LENGTH} too small: need at least 4 for 1 KV pair"
+assert NUM_QUERIES > 0, f"seq_length={SEQUENCE_LENGTH} too small: need at least 8 for 1 query"
+assert NUM_KV_PAIRS <= NUM_KEYS, f"num_kv_pairs={NUM_KV_PAIRS} > num_keys={NUM_KEYS}: not enough unique keys"
+
+print(f"Task: MQAR with seq_length={SEQUENCE_LENGTH} "
+      f"(num_kv_pairs={NUM_KV_PAIRS}, num_queries={NUM_QUERIES}, total_tokens={TOTAL_TOKENS})\n"
+      f"Vocab: {NUM_DATA_TOKENS} data tokens (keys [0,{NUM_KEYS}), values [{NUM_KEYS},{NUM_DATA_TOKENS})), "
+      f"sep={SEP_TOKEN}, model_vocab={VOCAB_SIZE}\n"
+      f"Config: train_examples={TRAIN_EXAMPLES}, epochs={EPOCHS}, lr={LEARNING_RATE}, "
       f"hidden_size={HIDDEN_SIZE}, num_layers={NUM_LAYERS}, num_heads={NUM_HEADS}, model_type={MODEL_TYPE}")
 
 # ============================================================================
@@ -97,13 +110,12 @@ def log_epoch(filepath, epoch, train_loss, val_loss, token_acc, exact_acc, epoch
 def log_test_results(filepath, gen_token_acc, gen_exact_acc):
     if not filepath:
         return
-    # Check if file exists to determine if we write header
     file_exists = os.path.isfile(filepath)
     with open(filepath, "a", newline="") as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow([
-                "model_type", "seq_length", "num_data_tokens", "final_token_acc", "final_exact_acc", 
+                "model_type", "seq_length", "num_data_tokens", "final_token_acc", "final_exact_acc",
                 "hidden_size", "num_layers", "num_heads"
             ])
         writer.writerow([
@@ -117,33 +129,50 @@ if args.results_file:
 # ============================================================================
 # Dataset
 # ============================================================================
-class SortingDataset(Dataset):
-    def __init__(self, num_examples, seq_length, num_data_tokens):
+class MQARDataset(Dataset):
+    def __init__(self, num_examples, num_kv_pairs, num_queries, num_keys, num_values, sep_token):
         self.num_examples = num_examples
-        self.seq_length = seq_length
-        self.num_data_tokens = num_data_tokens
+        self.num_kv_pairs = num_kv_pairs
+        self.num_queries = num_queries
+        self.num_keys = num_keys
+        self.num_values = num_values
+        self.sep_token = sep_token
+        self.kv_len = 2 * num_kv_pairs
 
     def __len__(self):
         return self.num_examples
 
     def __getitem__(self, idx):
-        # Create input list and sorted list
-        numbers = torch.randint(0, self.num_data_tokens, (self.seq_length,))
-        sorted_numbers = torch.sort(numbers).values
+        # Sample unique keys and random values
+        keys = torch.randperm(self.num_keys)[:self.num_kv_pairs]
+        values = torch.randint(self.num_keys, self.num_keys + self.num_values, (self.num_kv_pairs,))
 
-        full_seq = torch.cat([numbers, torch.tensor([SEP_TOKEN]), sorted_numbers, torch.tensor([EOS_TOKEN])])
-        input_ids = full_seq.clone()
-        labels = full_seq.clone()
-        
-        # Mask out the input part of the sequence in the labels to ignore it during loss calculation
-        labels[:SEQUENCE_LENGTH+1] = -100
+        # Build KV block: [K1, V1, K2, V2, ...]
+        kv_block = torch.stack([keys, values], dim=1).reshape(-1)
 
-        return input_ids, labels
+        # Select query keys (random subset of the KV-pair keys)
+        query_indices = torch.randperm(self.num_kv_pairs)[:self.num_queries]
+        query_keys = keys[query_indices]
+        query_values = values[query_indices]
 
-train_dataset = SortingDataset(TRAIN_EXAMPLES, SEQUENCE_LENGTH, NUM_DATA_TOKENS)
-val_dataset = SortingDataset(VAL_EXAMPLES, SEQUENCE_LENGTH, NUM_DATA_TOKENS)
+        # Build QA block: [Q1, A1, Q2, A2, ...]
+        qa_block = torch.stack([query_keys, query_values], dim=1).reshape(-1)
+
+        # Full sequence: [KV block | SEP | QA block]
+        full_seq = torch.cat([kv_block, torch.tensor([self.sep_token]), qa_block])
+
+        # Labels: -100 everywhere except answer positions
+        labels = torch.full_like(full_seq, -100)
+        for i in range(self.num_queries):
+            answer_pos = self.kv_len + 1 + 2 * i + 1
+            labels[answer_pos] = full_seq[answer_pos]
+
+        return full_seq, labels
+
+train_dataset = MQARDataset(TRAIN_EXAMPLES, NUM_KV_PAIRS, NUM_QUERIES, NUM_KEYS, NUM_VALUES, SEP_TOKEN)
+val_dataset = MQARDataset(VAL_EXAMPLES, NUM_KV_PAIRS, NUM_QUERIES, NUM_KEYS, NUM_VALUES, SEP_TOKEN)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-_T = 2 * SEQUENCE_LENGTH + 2
+_T = TOTAL_TOKENS
 eval_batch_size = min(BATCH_SIZE, max(1, (4 * 1024 * 1024 * 1024) // (_T * VOCAB_SIZE * 2)))
 val_loader = DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
@@ -153,7 +182,7 @@ val_loader = DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=False, 
 
 model_creator_dict = get_models_creator_dict()
 model_config, model_class = model_creator_dict[MODEL_TYPE]
-model = model_class(model_config(VOCAB_SIZE, 2 * SEQUENCE_LENGTH + 2, HIDDEN_SIZE, NUM_LAYERS, NUM_HEADS))
+model = model_class(model_config(VOCAB_SIZE, TOTAL_TOKENS, HIDDEN_SIZE, NUM_LAYERS, NUM_HEADS))
 model = model.to(device=device, dtype=torch.bfloat16)
 model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
@@ -184,6 +213,13 @@ def train_epoch():
         total_loss += loss.item()
     return total_loss / len(train_loader)
 
+# Pre-compute answer and query positions for evaluation
+KV_LEN = 2 * NUM_KV_PAIRS
+ANSWER_POSITIONS = [KV_LEN + 1 + 2 * i + 1 for i in range(NUM_QUERIES)]
+# In HuggingFace causal LM, logits[t] predicts token t+1, so to predict
+# the answer at position answer_pos, we look at logits[answer_pos - 1] (the query position)
+QUERY_POSITIONS = [ap - 1 for ap in ANSWER_POSITIONS]
+
 def evaluate():
     model.eval()
     total_loss = 0
@@ -191,11 +227,6 @@ def evaluate():
     total_sequences = 0
     correct_tokens = 0
     total_tokens = 0
-
-    # Slice definitions based on sequence layout:
-    # [input (seq_length) | SEP | sorted (seq_length) | EOS]
-    pred_slice = slice(SEQUENCE_LENGTH, 2 * SEQUENCE_LENGTH)      # model predicts next token
-    target_slice = slice(SEQUENCE_LENGTH + 1, 2 * SEQUENCE_LENGTH + 1)  # ground truth sorted region
 
     with torch.no_grad():
         for input_ids, labels in tqdm(val_loader, desc="Evaluating"):
@@ -205,13 +236,13 @@ def evaluate():
                 total_loss += outputs.loss.item()
 
             predictions = outputs.logits.argmax(dim=-1)
-            predicted_sorted = predictions[:, pred_slice]
-            expected_sorted = input_ids[:, target_slice]
+            pred_answers = predictions[:, QUERY_POSITIONS]
+            true_answers = input_ids[:, ANSWER_POSITIONS]
 
-            correct_tokens += (predicted_sorted == expected_sorted).sum().item()
-            total_tokens += predicted_sorted.numel()
-            correct_sequences += (predicted_sorted == expected_sorted).all(dim=1).sum().item()
-            total_sequences += predicted_sorted.size(0)
+            correct_tokens += (pred_answers == true_answers).sum().item()
+            total_tokens += pred_answers.numel()
+            correct_sequences += (pred_answers == true_answers).all(dim=1).sum().item()
+            total_sequences += pred_answers.size(0)
 
     return total_loss / len(val_loader), correct_sequences / total_sequences, correct_tokens / total_tokens
 
@@ -241,7 +272,9 @@ for epoch in range(EPOCHS):
 total_time = time.time() - start_time
 print(f"\nTotal Training Time: {total_time:.2f}s")
 
-# Final testing with autoregressive generation (batched)
+# ============================================================================
+# Autoregressive Generation Test (inject query keys)
+# ============================================================================
 TEST_EXAMPLES = 5000
 TEST_BATCH_SIZE = 128
 DISPLAY_SAMPLES = 5
@@ -256,52 +289,82 @@ total_token_correct = 0
 total_tokens = 0
 samples_seen = 0
 
-# Pre-generate all test inputs
-all_inputs = torch.randint(0, NUM_DATA_TOKENS, (TEST_EXAMPLES, SEQUENCE_LENGTH))
-all_expected = torch.sort(all_inputs, dim=1).values
-# Append SEP token to form prompts: [input | SEP]
-sep_col = torch.full((TEST_EXAMPLES, 1), SEP_TOKEN, dtype=torch.long)
-all_prompts = torch.cat([all_inputs, sep_col], dim=1)
-
 for start in tqdm(range(0, TEST_EXAMPLES, TEST_BATCH_SIZE), desc="Testing (generate)"):
     end = min(start + TEST_BATCH_SIZE, TEST_EXAMPLES)
-    batch_prompts = all_prompts[start:end].to(device)
-    batch_expected = all_expected[start:end]
+    batch_size = end - start
+
+    # Generate test data for this batch
+    batch_keys = []
+    batch_values = []
+    batch_query_keys = []
+    batch_query_values = []
+
+    for _ in range(batch_size):
+        keys = torch.randperm(NUM_KEYS)[:NUM_KV_PAIRS]
+        values = torch.randint(NUM_KEYS, NUM_KEYS + NUM_VALUES, (NUM_KV_PAIRS,))
+        query_indices = torch.randperm(NUM_KV_PAIRS)[:NUM_QUERIES]
+        batch_keys.append(keys)
+        batch_values.append(values)
+        batch_query_keys.append(keys[query_indices])
+        batch_query_values.append(values[query_indices])
+
+    # Build prompts: [KV block | SEP]
+    prompts = []
+    for i in range(batch_size):
+        kv_block = torch.stack([batch_keys[i], batch_values[i]], dim=1).reshape(-1)
+        prompt = torch.cat([kv_block, torch.tensor([SEP_TOKEN])])
+        prompts.append(prompt)
+    prompts = torch.stack(prompts).to(device)  # (batch, 2*NUM_KV_PAIRS + 1)
+
+    # Inject query keys one at a time and generate one answer per query
+    pred_answers_list = []
+    current_seq = prompts
 
     with torch.no_grad():
-        outputs = model.generate(
-            input_ids=batch_prompts,
-            attention_mask=torch.ones_like(batch_prompts),
-            max_new_tokens=SEQUENCE_LENGTH + 1,
-            do_sample=False,
-            eos_token_id=EOS_TOKEN,
-        )
+        for q_idx in range(NUM_QUERIES):
+            # Append query key to current sequence
+            q_key = torch.stack([batch_query_keys[i][q_idx] for i in range(batch_size)]).unsqueeze(1).to(device)
+            current_seq = torch.cat([current_seq, q_key], dim=1)
 
-    # Extract predicted sorted region: everything after the prompt
-    predicted_region = outputs[:, SEQUENCE_LENGTH + 1:]
+            # Generate 1 token (the answer)
+            outputs = model.generate(
+                input_ids=current_seq,
+                attention_mask=torch.ones_like(current_seq),
+                max_new_tokens=1,
+                do_sample=False,
+            )
 
-    for j in range(end - start):
-        pred = predicted_region[j].tolist()
-        if EOS_TOKEN in pred:
-            pred = pred[:pred.index(EOS_TOKEN)]
-        expected = batch_expected[j].tolist()
+            # Extract the generated answer token
+            pred_answer = outputs[:, -1]  # (batch,)
+            pred_answers_list.append(pred_answer)
 
-        # Pad/truncate for token accuracy
-        pred_padded = (pred + [-1] * SEQUENCE_LENGTH)[:SEQUENCE_LENGTH]
-        token_matches = sum(p == t for p, t in zip(pred_padded, expected))
+            # Append generated answer to sequence for next iteration
+            current_seq = outputs
+
+    # Stack predicted answers: (batch, NUM_QUERIES)
+    pred_answers = torch.stack(pred_answers_list, dim=1).cpu()
+    expected_answers = torch.stack(batch_query_values)  # (batch, NUM_QUERIES)
+
+    for j in range(batch_size):
+        pred = pred_answers[j].tolist()
+        expected = expected_answers[j].tolist()
+
+        token_matches = sum(p == t for p, t in zip(pred, expected))
         exact = pred == expected
 
         total_token_correct += token_matches
-        total_tokens += SEQUENCE_LENGTH
+        total_tokens += NUM_QUERIES
         total_exact += int(exact)
 
         if samples_seen < DISPLAY_SAMPLES:
-            inp = all_inputs[start + j].tolist()
-            token_acc = token_matches / SEQUENCE_LENGTH * 100
+            kv_block = torch.stack([batch_keys[j], batch_values[j]], dim=1).reshape(-1).tolist()
+            queries = batch_query_keys[j].tolist()
+            token_acc = token_matches / NUM_QUERIES * 100
             print(f"\n  Sample {samples_seen+1}:")
-            print(f"  Input:     {inp}")
-            print(f"  Predicted: {pred}")
-            print(f"  Expected:  {expected}")
+            print(f"  KV pairs: {list(zip(kv_block[0::2], kv_block[1::2]))}")
+            print(f"  Queries:    {queries}")
+            print(f"  Predicted:  {pred}")
+            print(f"  Expected:   {expected}")
             print(f"  Token Acc: {token_acc:.1f}%, Exact: {'✓' if exact else '✗'}")
         samples_seen += 1
 
@@ -313,8 +376,7 @@ print(f"  Token Accuracy: {gen_token_acc*100:.2f}%")
 print(f"  Exact Accuracy: {gen_exact_acc*100:.2f}%")
 print(f"{'='*70}")
 
-
-print("LOGGING FINAL TEST RESULTS TO CSV: {args.test_results_file}")
+print(f"LOGGING FINAL TEST RESULTS TO CSV: {args.test_results_file}")
 log_test_results(args.test_results_file, gen_token_acc, gen_exact_acc)
 
 print("\nDone.")

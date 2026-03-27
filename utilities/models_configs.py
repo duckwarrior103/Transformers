@@ -4,6 +4,7 @@ from fla.models import RetNetConfig
 from fla.models import TransformerConfig
 from fla.models import DeltaNetConfig
 from fla.models import GatedDeltaNetConfig
+from utilities.gead import GEADConfig, GEADForCausalLM
 
 # Importing model classes
 from fla.models import TransformerForCausalLM
@@ -148,6 +149,25 @@ def get_gated_deltanet_config(vocab_size, seq_length, hidden_size=128, num_hidde
     )
 
 
+def get_gead_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
+    return GEADConfig(
+        vocab_size=vocab_size,
+        hidden_size=hidden_size,
+        num_hidden_layers=num_hidden_layers,
+        num_heads=num_heads,
+        max_position_embeddings=seq_length,
+        pad_token_id=vocab_size - 1,
+        eos_token_id=vocab_size - 1,
+        attn_mode="chunk",
+        use_short_conv=True,
+        use_elm=True,
+        fuse_norm=True,
+        fuse_swiglu=True,
+        fuse_cross_entropy=True,
+        fuse_linear_cross_entropy=False,
+    )
+
+
 def get_models_creator_dict():
     return {
         "standard": (get_standard_config, TransformerForCausalLM),
@@ -156,5 +176,6 @@ def get_models_creator_dict():
         "retnet": (get_retnet_config, RetNetForCausalLM),
         "deltanet": (get_deltanet_config, DeltaNetForCausalLM),
         "gated_deltanet": (get_gated_deltanet_config, GatedDeltaNetForCausalLM),
+        "gead": (get_gead_config, GEADForCausalLM),
     }
 

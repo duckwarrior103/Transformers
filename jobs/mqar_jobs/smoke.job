@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpuL
+#SBATCH --partition=gpuA
 #SBATCH --gpus=1
 #SBATCH -c 8
 #SBATCH --ntasks=1
@@ -21,13 +21,13 @@ BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
 export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 
 # Configuration
-MODEL="gated_deltanet"
+MODEL="standard"
 SEQ=64
-NUM_DATA_TOKENS=64
+NUM_DATA_TOKENS=128
 
 # Create a unique run directory based on the current date and time
 RUN_ID="run_$(date +%Y-%m-%d_%H-%M-%S)"
-RUN_DIR="$BASE/results/sort_jobs/smoke/$RUN_ID"
+RUN_DIR="$BASE/results/mqar_jobs/smoke/$RUN_ID"
 
 # Create directories for data and logs, and redirect output to a log file
 mkdir -p "$RUN_DIR/data"
@@ -35,11 +35,11 @@ mkdir -p "$RUN_DIR/logs"
 exec > >(tee -a "$RUN_DIR/logs/${MODEL}_seq${SEQ}_tok${NUM_DATA_TOKENS}.log") 2>&1
 
 echo "===== model=$MODEL seq_length=$SEQ num_data_tokens=$NUM_DATA_TOKENS ====="
-CUDA_VISIBLE_DEVICES=0 python -u "$BASE/experiments/sort_experiment.py" \
+CUDA_VISIBLE_DEVICES=0 python -u "$BASE/experiments/mqar_experiment.py" \
     --model_type "$MODEL" \
     --seq_length $SEQ \
     --num_data_tokens $NUM_DATA_TOKENS \
-    --train_examples 50000 \
+    --train_examples 100000 \
     --val_examples 5000 \
     --batch_size 256 \
     --epochs 8 \
@@ -47,6 +47,7 @@ CUDA_VISIBLE_DEVICES=0 python -u "$BASE/experiments/sort_experiment.py" \
     --hidden_size 128 \
     --num_layers 2 \
     --num_heads 2 \
+    --test_results_file "$RUN_DIR/data/test_results_seq_${SEQ}.csv" \
     --results_file "$RUN_DIR/data/results.csv" 2>&1
 
 echo "Done"

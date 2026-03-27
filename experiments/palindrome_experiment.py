@@ -25,7 +25,7 @@ print()
 # Argument Parsing
 # ============================================================================
 parser = argparse.ArgumentParser(description="Train a transformer for palindrome (reverse) task.")
-parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet"], help="Type of model to train")
+parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet", "gead"], help="Type of model to train")
 parser.add_argument("--seq_length", type=int, default=256)
 parser.add_argument("--num_data_tokens", type=int, default=64)
 parser.add_argument("--train_examples", type=int, default=50000)
