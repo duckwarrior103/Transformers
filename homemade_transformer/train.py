@@ -43,7 +43,6 @@ class TransformerTrainer:
 
             total_loss += loss.item()
             
-            # Log every 50 batches
             if (batch_idx + 1) % 50 == 0:
                 avg_loss = total_loss / (batch_idx + 1)
                 print(f"  Batch [{batch_idx + 1}/{num_batches}] Loss: {loss.item():.4f} | Avg Loss: {avg_loss:.4f}")
@@ -69,11 +68,9 @@ class TransformerTrainer:
 
                 predictions = logits.argmax(dim=-1)
                 
-                # Token-wise accuracy
                 correct_tokens += (predictions == targets).sum().item()
                 total_tokens += targets.numel()
                 
-                # Sequence-wise accuracy (entire sequence must be correct)
                 correct_sequences += (predictions == targets).all(dim=1).sum().item()
                 total_sequences += targets.size(0)
 
@@ -120,7 +117,6 @@ class TransformerTrainer:
         """Plot token and sequence accuracy over epochs."""
         plt.figure(figsize=(12, 5))
         
-        # Token accuracy
         plt.subplot(1, 2, 1)
         plt.plot(self.token_accuracy_history, marker='o', color='blue', linewidth=2)
         plt.xlabel("Epoch")
@@ -128,7 +124,6 @@ class TransformerTrainer:
         plt.title("Token-wise Accuracy over Epochs")
         plt.grid(True)
         
-        # Sequence accuracy
         plt.subplot(1, 2, 2)
         plt.plot(self.sequence_accuracy_history, marker='s', color='green', linewidth=2)
         plt.xlabel("Epoch")
@@ -164,11 +159,9 @@ def batch_test_model(trainer, test_loader, test_size=1000):
             logits = trainer.model(sequences)
             predictions = logits.argmax(dim=-1)
 
-            # Element-wise accuracy
             correct += (predictions == targets).sum().item()
             total += targets.numel()
 
-            # Row-wise accuracy
             row_correct += (predictions == targets).all(dim=1).sum().item()
             num_rows += targets.size(0)
 
@@ -185,7 +178,6 @@ def sample_inference(trainer, num_samples=5, seq_length=3):
     """Run inference on random sorting examples and display predictions."""
     trainer.model.eval()
     
-    # Generate small test dataset
     test_dataset = SortingDataset(num_samples=num_samples, seq_length=seq_length, max_value=50)
     
     print("\n" + "="*80)
@@ -203,7 +195,6 @@ def sample_inference(trainer, num_samples=5, seq_length=3):
             logits = trainer.model(sequence_input)  # (1, seq_length, vocab_size)
             predictions = logits.argmax(dim=-1).squeeze(0)  # (seq_length,)
             
-            # Check if entire sequence is correct
             is_correct = torch.all(predictions == target).item()
             correct_count += int(is_correct)
             status = "✓ CORRECT" if is_correct else "✗ INCORRECT"
@@ -224,7 +215,6 @@ def main():
     # Configuration parameters
     seq_length = 8  # Default sequence length for training
     
-    # Check for command-line arguments
     if len(sys.argv) > 1:
         mode = sys.argv[1]
         
@@ -304,7 +294,6 @@ def main():
         device="mps" if torch.backends.mps.is_available() else "cpu"
     )
 
-    # Dataset
     train_dataset = SortingDataset(num_samples=50000, seq_length=seq_length, max_value=50)
     val_dataset = SortingDataset(num_samples=10000, seq_length=seq_length, max_value=50)
     test_dataset = SortingDataset(num_samples=10000, seq_length=seq_length, max_value=50)
@@ -318,19 +307,15 @@ def main():
     save_dir.mkdir(exist_ok=True)
     model_path = save_dir / f"transformer_sorting_model_seq{seq_length}.pt"
 
-    # Train
     print(f"Starting training with sequence length={seq_length}...")
     trainer = TransformerTrainer(config, learning_rate=5e-4)
     trainer.train_model(train_loader, val_loader, epochs=5, verbose=True)
 
-    # Test
     print("\nTesting on test set...")
     batch_test_model(trainer, test_loader)
 
-    # Save
     trainer.save_model(model_path)
 
-    # Plot
     trainer.plot_loss()
     trainer.plot_accuracy()
 

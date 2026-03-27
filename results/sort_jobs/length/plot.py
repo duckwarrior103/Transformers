@@ -148,7 +148,6 @@ def main():
     graphs_dir = os.path.join(run_dir, "graphs")
     os.makedirs(graphs_dir, exist_ok=True)
 
-    # ---- Per-epoch plots from seq_<N>.csv ----
     all_data = load_all_epochs(run_dir)
     if all_data:
         print(f"Loaded {len(all_data)} sequence lengths (epoch logs)")
@@ -176,7 +175,6 @@ def main():
     else:
         print("No per-epoch result CSVs found (data/seq_*.csv). Skipping epoch/val-loss plots.")
 
-    # ---- Generation test plots from merged test_results.csv ----
     tdf = load_test_results(run_dir)
     if tdf is None:
         print("No merged test results found (data/test_results.csv).")

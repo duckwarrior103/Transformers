@@ -12,18 +12,12 @@ import csv
 import os
 from utilities.models_configs import get_models_creator_dict
 
-# ============================================================================
-# Device
-# ============================================================================
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 print(f"\nUsing device: {device}")
 if torch.cuda.is_available():
     print(f"GPU: {torch.cuda.get_device_name(0)}")
 print()
 
-# ============================================================================
-# Argument Parsing
-# ============================================================================
 parser = argparse.ArgumentParser(description="Train a transformer for sorting task.")
 parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet", "gead"], help="Type of model to train")
 parser.add_argument("--seq_length", type=int, default=256)
@@ -41,13 +35,11 @@ parser.add_argument("--test_results_file", type=str, default="", help="Path to C
 parser.add_argument("--results_file", type=str, default="", help="Path to CSV file for logging per-epoch results")
 args = parser.parse_args()
 
-# Model hyperparameters 
 MODEL_TYPE = args.model_type
 NUM_LAYERS = args.num_layers
 NUM_HEADS = args.num_heads
 HIDDEN_SIZE = args.hidden_size
 
-# Training hyperparameters
 TRAIN_EXAMPLES = args.train_examples
 VAL_EXAMPLES = args.val_examples
 BATCH_SIZE = args.batch_size
@@ -55,7 +47,6 @@ EPOCHS = args.epochs
 LEARNING_RATE = args.lr
 WEIGHT_DECAY = args.weight_decay
 
-# Task and tokenizer
 SEQUENCE_LENGTH = args.seq_length
 
 NUM_DATA_TOKENS = args.num_data_tokens # e.g. 64 means integers in range 0-63, 64 tokens
@@ -68,9 +59,6 @@ print(f"Task: Sorting {SEQUENCE_LENGTH} integers in range [0, {NUM_DATA_TOKENS-1
       f"train_examples={TRAIN_EXAMPLES}, epochs={EPOCHS}, lr={LEARNING_RATE}, "
       f"hidden_size={HIDDEN_SIZE}, num_layers={NUM_LAYERS}, num_heads={NUM_HEADS}, model_type={MODEL_TYPE}")
 
-# ============================================================================
-# CSV Logging
-# ============================================================================
 def init_csv(filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", newline="") as f:
@@ -97,7 +85,6 @@ def log_epoch(filepath, epoch, train_loss, val_loss, token_acc, exact_acc, epoch
 def log_test_results(filepath, gen_token_acc, gen_exact_acc):
     if not filepath:
         return
-    # Check if file exists to determine if we write header
     file_exists = os.path.isfile(filepath)
     with open(filepath, "a", newline="") as f:
         writer = csv.writer(f)
@@ -114,9 +101,6 @@ def log_test_results(filepath, gen_token_acc, gen_exact_acc):
 if args.results_file:
     init_csv(args.results_file)
 
-# ============================================================================
-# Dataset
-# ============================================================================
 class SortingDataset(Dataset):
     def __init__(self, num_examples, seq_length, num_data_tokens):
         self.num_examples = num_examples
@@ -127,7 +111,6 @@ class SortingDataset(Dataset):
         return self.num_examples
 
     def __getitem__(self, idx):
-        # Create input list and sorted list
         numbers = torch.randint(0, self.num_data_tokens, (self.seq_length,))
         sorted_numbers = torch.sort(numbers).values
 
@@ -147,10 +130,6 @@ _T = 2 * SEQUENCE_LENGTH + 2
 eval_batch_size = min(BATCH_SIZE, max(1, (4 * 1024 * 1024 * 1024) // (_T * VOCAB_SIZE * 2)))
 val_loader = DataLoader(val_dataset, batch_size=eval_batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
-# ============================================================================
-# Model
-# ============================================================================
-
 model_creator_dict = get_models_creator_dict()
 model_config, model_class = model_creator_dict[MODEL_TYPE]
 model = model_class(model_config(VOCAB_SIZE, 2 * SEQUENCE_LENGTH + 2, HIDDEN_SIZE, NUM_LAYERS, NUM_HEADS))
@@ -165,9 +144,6 @@ total_steps = len(train_loader) * EPOCHS
 warmup_steps = int(0.05 * total_steps)
 scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
 
-# ============================================================================
-# Training Functions
-# ============================================================================
 def train_epoch():
     model.train()
     total_loss = 0
@@ -215,9 +191,6 @@ def evaluate():
 
     return total_loss / len(val_loader), correct_sequences / total_sequences, correct_tokens / total_tokens
 
-# ============================================================================
-# Training Loop
-# ============================================================================
 best_accuracy = 0
 start_time = time.time()
 
@@ -241,7 +214,6 @@ for epoch in range(EPOCHS):
 total_time = time.time() - start_time
 print(f"\nTotal Training Time: {total_time:.2f}s")
 
-# Final testing with autoregressive generation (batched)
 TEST_EXAMPLES = 5000
 TEST_BATCH_SIZE = 128
 DISPLAY_SAMPLES = 5
@@ -256,10 +228,8 @@ total_token_correct = 0
 total_tokens = 0
 samples_seen = 0
 
-# Pre-generate all test inputs
 all_inputs = torch.randint(0, NUM_DATA_TOKENS, (TEST_EXAMPLES, SEQUENCE_LENGTH))
 all_expected = torch.sort(all_inputs, dim=1).values
-# Append SEP token to form prompts: [input | SEP]
 sep_col = torch.full((TEST_EXAMPLES, 1), SEP_TOKEN, dtype=torch.long)
 all_prompts = torch.cat([all_inputs, sep_col], dim=1)
 
@@ -277,7 +247,6 @@ for start in tqdm(range(0, TEST_EXAMPLES, TEST_BATCH_SIZE), desc="Testing (gener
             eos_token_id=EOS_TOKEN,
         )
 
-    # Extract predicted sorted region: everything after the prompt
     predicted_region = outputs[:, SEQUENCE_LENGTH + 1:]
 
     for j in range(end - start):
@@ -286,7 +255,6 @@ for start in tqdm(range(0, TEST_EXAMPLES, TEST_BATCH_SIZE), desc="Testing (gener
             pred = pred[:pred.index(EOS_TOKEN)]
         expected = batch_expected[j].tolist()
 
-        # Pad/truncate for token accuracy
         pred_padded = (pred + [-1] * SEQUENCE_LENGTH)[:SEQUENCE_LENGTH]
         token_matches = sum(p == t for p, t in zip(pred_padded, expected))
         exact = pred == expected

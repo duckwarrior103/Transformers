@@ -5,8 +5,6 @@ from fla.models import TransformerConfig
 from fla.models import DeltaNetConfig
 from fla.models import GatedDeltaNetConfig
 from utilities.gead import GEADConfig, GEADForCausalLM
-
-# Importing model classes
 from fla.models import TransformerForCausalLM
 from fla.models import GLAForCausalLM
 from fla.models import RetNetForCausalLM
@@ -31,8 +29,6 @@ class LinearAttentionForCausalLM(_LinearAttentionForCausalLM):
 from fla.models import DeltaNetForCausalLM
 from fla.models import GatedDeltaNetForCausalLM
 
-# Config for standard attention model (e.g. FlashAttention2)
-
 def get_standard_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):  
     return TransformerConfig(  
         vocab_size=vocab_size,  
@@ -51,8 +47,6 @@ def get_standard_config(vocab_size, seq_length, hidden_size=128, num_hidden_laye
         fuse_cross_entropy=True,  
         fuse_linear_cross_entropy=False,  
     )
-
-# Config for linear attention model (e.g. FlashAttention2)
 def get_linear_attention_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
     return LinearAttentionConfig(
         vocab_size=vocab_size,

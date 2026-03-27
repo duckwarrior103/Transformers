@@ -158,13 +158,10 @@ def main():
     graphs_dir = os.path.join(run_dir, "graphs")
     os.makedirs(graphs_dir, exist_ok=True)
 
-    # ---- Per-epoch plots from seq_<N>.csv ----
     all_data = load_all_epochs(run_dir)
 
-    # ---- Generation test plots from merged test_results.csv ----
     tdf = load_test_results(run_dir)
 
-    # ---- Determine num_data_tokens for titles ----
     ndt = get_num_data_tokens(all_data, tdf)
     ndt_str = f" (num_data_tokens={ndt})" if ndt is not None else ""
 

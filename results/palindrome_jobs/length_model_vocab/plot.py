@@ -45,10 +45,6 @@ def find_newest_run_dir(base):
     return max(subdirs, key=os.path.getmtime)
 
 
-# ---------------------------------------------------------------------------
-# Data loading
-# ---------------------------------------------------------------------------
-
 def load_test_results(run_dir):
     """Load merged test_results.csv."""
     fp = os.path.join(run_dir, "data", "test_results.csv")
@@ -96,10 +92,6 @@ def load_model_epochs(run_dir, model):
             print(f"  Warning: could not read {fp}: {e}")
     return all_data
 
-
-# ---------------------------------------------------------------------------
-# Heatmap helpers
-# ---------------------------------------------------------------------------
 
 def build_heatmap_matrix(tdf_model, metric, seq_lengths, dtokens_list):
     """Build a 2D numpy array (dtokens x seq_length) for the given metric."""
@@ -188,10 +180,6 @@ def plot_comparison_heatmaps(tdf, graphs_dir, metric, suptitle, filename,
     print(f"Wrote {out}")
 
 
-# ---------------------------------------------------------------------------
-# Line plot helpers
-# ---------------------------------------------------------------------------
-
 def plot_lines_by_seq(tdf, graphs_dir, metric, ylabel, suptitle, filename, scale=100):
     """For each seq_length, plot metric vs num_data_tokens, one line per model."""
     seq_lengths = sorted(tdf["seq_length"].unique().astype(int))
@@ -272,10 +260,6 @@ def plot_lines_by_dtokens(tdf, graphs_dir, metric, ylabel, suptitle, filename, s
     print(f"Wrote {out}")
 
 
-# ---------------------------------------------------------------------------
-# Difficulty surface (averaged across models)
-# ---------------------------------------------------------------------------
-
 def plot_difficulty_surface(tdf, graphs_dir, metric, title, filename, scale=100):
     """Contour plot of accuracy averaged across all models."""
     seq_lengths = sorted(tdf["seq_length"].unique().astype(int))
@@ -317,10 +301,6 @@ def plot_difficulty_surface(tdf, graphs_dir, metric, title, filename, scale=100)
     print(f"Wrote {out}")
 
 
-# ---------------------------------------------------------------------------
-# Per-model epoch convergence heatmaps (best final epoch accuracy)
-# ---------------------------------------------------------------------------
-
 def plot_model_epoch_heatmaps(run_dir, model, model_graphs, seq_lengths, dtokens_list):
     """From per-epoch CSVs, build heatmaps of final-epoch teacher-forced accuracy."""
     all_data = load_model_epochs(run_dir, model)
@@ -346,10 +326,6 @@ def plot_model_epoch_heatmaps(run_dir, model, model_graphs, seq_lengths, dtokens
                             filepath)
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main():
     run_dir = sys.argv[1] if len(sys.argv) > 1 else find_newest_run_dir(BASE_DIR)
     print(f"Plotting from: {run_dir}")
@@ -368,7 +344,6 @@ def main():
     print(f"Seq lengths: {seq_lengths}")
     print(f"Num data tokens: {dtokens_list}")
 
-    # ---- Per-model heatmaps ----
     for model in MODELS:
         print(f"\n--- {model} ---")
         model_graphs = os.path.join(graphs_dir, model)
@@ -393,7 +368,6 @@ def main():
         # Teacher-forced heatmaps from epoch data
         plot_model_epoch_heatmaps(run_dir, model, model_graphs, seq_lengths, dtokens_list)
 
-    # ---- Cross-model comparison heatmaps (shared scale) ----
     print("\n--- Cross-model comparison heatmaps ---")
     if "final_exact_acc" in tdf.columns:
         plot_comparison_heatmaps(tdf, graphs_dir, "final_exact_acc",
@@ -404,7 +378,6 @@ def main():
                                  "Palindrome — Model Comparison — Final Token Accuracy (generate)",
                                  "comparison_heatmap_final_token_acc.png")
 
-    # ---- Line plots: accuracy vs num_data_tokens, grouped by seq_length ----
     print("\n--- Line plots by seq_length ---")
     if "final_exact_acc" in tdf.columns:
         plot_lines_by_seq(tdf, graphs_dir, "final_exact_acc", "Exact Accuracy (%)",
@@ -415,7 +388,6 @@ def main():
                           "Palindrome — Token Accuracy vs Num Data Tokens (by seq_length)",
                           "comparison_line_by_seq_token_acc.png")
 
-    # ---- Line plots: accuracy vs seq_length, grouped by num_data_tokens ----
     print("\n--- Line plots by num_data_tokens ---")
     if "final_exact_acc" in tdf.columns:
         plot_lines_by_dtokens(tdf, graphs_dir, "final_exact_acc", "Exact Accuracy (%)",
@@ -426,7 +398,6 @@ def main():
                               "Palindrome — Token Accuracy vs Seq Length (by num_data_tokens)",
                               "comparison_line_by_dtokens_token_acc.png")
 
-    # ---- Difficulty surface (averaged across models) ----
     print("\n--- Difficulty surface ---")
     if "final_exact_acc" in tdf.columns:
         plot_difficulty_surface(tdf, graphs_dir, "final_exact_acc",

@@ -44,10 +44,6 @@ def find_newest_run_dir(base):
     return max(subdirs, key=os.path.getmtime)
 
 
-# ---------------------------------------------------------------------------
-# Data loading
-# ---------------------------------------------------------------------------
-
 def load_model_epochs(run_dir, model):
     """Return dict mapping seq_length -> DataFrame for a single model."""
     all_data = {}
@@ -102,10 +98,6 @@ def load_test_results(run_dir):
     return df.dropna(subset=["seq_length"]).sort_values("seq_length").reset_index(drop=True)
 
 
-# ---------------------------------------------------------------------------
-# Single-metric plotting helpers
-# ---------------------------------------------------------------------------
-
 def plot_metric(rdf, graphs_dir, xcol, ycol, ylabel, title, filename, scale=1.0, log2_x=True):
     fig, ax = plt.subplots(figsize=(9, 5))
     ax.plot(rdf[xcol], rdf[ycol] * scale, marker="o", markersize=5, color="steelblue")
@@ -147,10 +139,6 @@ def plot_epoch_metric(all_data, graphs_dir, metric, ylabel, title, filename, sca
     plt.close()
     print(f"Wrote {out}")
 
-
-# ---------------------------------------------------------------------------
-# Per-model plots
-# ---------------------------------------------------------------------------
 
 def plot_single_model(run_dir, model, graphs_dir):
     """Generate all per-model plots into graphs/<model>/."""
@@ -197,10 +185,6 @@ def plot_single_model(run_dir, model, graphs_dir):
                 plot_metric(mdf, model_graphs, "seq_length", "final_token_acc", "Final Token Accuracy (%)",
                             f"{model} — Final Token Accuracy vs Seq Length (generate)", "final_token_acc.png", scale=100)
 
-
-# ---------------------------------------------------------------------------
-# Cross-model comparison plots
-# ---------------------------------------------------------------------------
 
 def plot_comparison(all_model_finals, graphs_dir, ycol, ylabel, title, filename, scale=1.0):
     """One line per model, metric vs seq_length."""
@@ -254,10 +238,6 @@ def plot_test_comparison(tdf, graphs_dir, ycol, ylabel, title, filename, scale=1
     print(f"Wrote {out}")
 
 
-# ---------------------------------------------------------------------------
-# Convergence plots — one subplot per seq_length, one line per model
-# ---------------------------------------------------------------------------
-
 def plot_convergence(all_model_epochs, graphs_dir, metric, ylabel, title_prefix, filename, scale=1.0):
     """Grid of subplots: each subplot is a seq_length, lines are models."""
     # Collect all seq_lengths across models
@@ -301,10 +281,6 @@ def plot_convergence(all_model_epochs, graphs_dir, metric, ylabel, title_prefix,
     print(f"Wrote {out}")
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main():
     run_dir = sys.argv[1] if len(sys.argv) > 1 else find_newest_run_dir(BASE_DIR)
     print(f"Plotting from: {run_dir}")
@@ -312,7 +288,6 @@ def main():
     graphs_dir = os.path.join(run_dir, "graphs")
     os.makedirs(graphs_dir, exist_ok=True)
 
-    # ---- Per-model plots ----
     all_model_epochs = {}   # model -> {seq -> df}
     all_model_finals = {}   # model -> final-epoch df
 
@@ -324,7 +299,6 @@ def main():
             all_model_epochs[model] = data
             all_model_finals[model] = load_final_from_epochs(data)
 
-    # ---- Cross-model comparison (teacher-forced) ----
     if all_model_finals:
         print("\n--- Cross-model comparison plots ---")
         plot_comparison(all_model_finals, graphs_dir, "token_acc", "Token Accuracy (%)",
@@ -334,7 +308,6 @@ def main():
                         "Palindrome — Model Comparison — Exact Accuracy vs Seq Length (teacher-forced)",
                         "comparison_exact_acc.png", scale=100)
 
-    # ---- Cross-model comparison (generation test) ----
     tdf = load_test_results(run_dir)
     if tdf is not None:
         print("\n--- Cross-model test comparison plots ---")
@@ -347,7 +320,6 @@ def main():
                                  "Palindrome — Model Comparison — Exact Accuracy vs Seq Length (generate)",
                                  "comparison_test_exact_acc.png", scale=100)
 
-    # ---- Convergence plots ----
     if all_model_epochs:
         print("\n--- Convergence plots ---")
         plot_convergence(all_model_epochs, graphs_dir, "token_acc", "Token Accuracy (%)",

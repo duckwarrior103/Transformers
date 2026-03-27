@@ -196,8 +196,6 @@ class GEADLayer(nn.Module):
         else:
             self.o_norm = RMSNorm(self.head_v_dim, eps=norm_eps, dtype=torch.float32)
         self.o_proj = nn.Linear(self.value_dim, hidden_size, bias=False)
-
-        # === ELM: frozen orthogonal projection ===
         self.use_elm = use_elm
         self.elm_dim = elm_dim or self.head_k_dim
         if use_elm:
@@ -268,7 +266,6 @@ class GEADLayer(nn.Module):
         if self.num_v_heads > self.num_heads:
             q, k = map(lambda x: repeat(x, '... h d -> ... (h g) d', g=self.num_v_heads // self.num_heads), (q, k))
 
-        # === ELM: nonlinear key/query projection ===
         if self.use_elm:
             # q, k: [B, T, H, K] ; elm_proj: [H, m, K]
             dtype = k.dtype
