@@ -27,7 +27,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TASK = "Sort"
 
-BASELINES   = ["gdn_ek1", "gdn_ek2", "gdn_ek4"]
+BASELINES   = ["gdn_hd64", "gdn_hd128", "gdn_hd256"]
 ELM_MODELS  = ["gead_elm64", "gead_elm128", "gead_elm256"]
 ELM_ORTH    = ["gead_elm64_orth", "gead_elm128_orth", "gead_elm256_orth"]
 MODELS = BASELINES + ELM_MODELS + ELM_ORTH
@@ -36,21 +36,21 @@ MODELS = BASELINES + ELM_MODELS + ELM_ORTH
 _PAIR_COLORS = ["#1f77b4", "#2ca02c", "#d62728"]
 
 MODEL_COLORS = {
-    "gdn_ek1":          _PAIR_COLORS[0],
+    "gdn_hd64":          _PAIR_COLORS[0],
     "gead_elm64":       _PAIR_COLORS[0],
     "gead_elm64_orth":  _PAIR_COLORS[0],
-    "gdn_ek2":          _PAIR_COLORS[1],
+    "gdn_hd128":          _PAIR_COLORS[1],
     "gead_elm128":      _PAIR_COLORS[1],
     "gead_elm128_orth": _PAIR_COLORS[1],
-    "gdn_ek4":          _PAIR_COLORS[2],
+    "gdn_hd256":          _PAIR_COLORS[2],
     "gead_elm256":      _PAIR_COLORS[2],
     "gead_elm256_orth": _PAIR_COLORS[2],
 }
 
 MODEL_LABELS = {
-    "gdn_ek1":          "GDN ek=1 (K=64)",
-    "gdn_ek2":          "GDN ek=2 (K=128)",
-    "gdn_ek4":          "GDN ek=4 (K=256)",
+    "gdn_hd64":          "GDN hd=64",
+    "gdn_hd128":          "GDN hd=128",
+    "gdn_hd256":          "GDN hd=256",
     "gead_elm64":       "ELM-64 rand (K=64)",
     "gead_elm128":      "ELM-128 rand (K=128)",
     "gead_elm256":      "ELM-256 rand (K=256)",
@@ -61,9 +61,9 @@ MODEL_LABELS = {
 
 # Linestyles: GDN=dashed, ELM-rand=solid, ELM-orth=dotted
 MODEL_LINESTYLES = {
-    "gdn_ek1":          "--",
-    "gdn_ek2":          "--",
-    "gdn_ek4":          "--",
+    "gdn_hd64":          "--",
+    "gdn_hd128":          "--",
+    "gdn_hd256":          "--",
     "gead_elm64":       "-",
     "gead_elm128":      "-",
     "gead_elm256":      "-",
@@ -73,9 +73,9 @@ MODEL_LINESTYLES = {
 }
 
 MODEL_MARKERS = {
-    "gdn_ek1":          "o",
-    "gdn_ek2":          "o",
-    "gdn_ek4":          "o",
+    "gdn_hd64":          "o",
+    "gdn_hd128":          "o",
+    "gdn_hd256":          "o",
     "gead_elm64":       "s",
     "gead_elm128":      "s",
     "gead_elm256":      "s",
@@ -93,9 +93,9 @@ STYLE_LEGEND = [
 
 # Head-to-head triples (GDN, ELM-rand, ELM-orth, label)
 PAIRS = [
-    ("gdn_ek1", "gead_elm64",  "gead_elm64_orth",  "K=64"),
-    ("gdn_ek2", "gead_elm128", "gead_elm128_orth", "K=128"),
-    ("gdn_ek4", "gead_elm256", "gead_elm256_orth", "K=256"),
+    ("gdn_hd64", "gead_elm64",  "gead_elm64_orth",  "K=64"),
+    ("gdn_hd128", "gead_elm128", "gead_elm128_orth", "K=128"),
+    ("gdn_hd256", "gead_elm256", "gead_elm256_orth", "K=256"),
 ]
 
 
@@ -137,8 +137,8 @@ def load_final_from_epochs(all_data):
             "seq_length": seq,
             "train_loss": float(last.get("train_loss", np.nan)),
             "val_loss":   float(last.get("val_loss", np.nan)),
-            "token_acc":  float(last.get("token_acc", np.nan)),
-            "exact_acc":  float(last.get("exact_acc", np.nan)),
+            "token_acc":  float(df["token_acc"].max()) if "token_acc" in df.columns else np.nan,
+            "exact_acc":  float(df["exact_acc"].max()) if "exact_acc" in df.columns else np.nan,
         })
     return pd.DataFrame(records).sort_values("seq_length").reset_index(drop=True)
 
@@ -175,6 +175,11 @@ def plot_metric(rdf, graphs_dir, xcol, ycol, ylabel, title, filename, scale=1.0)
     print(f"Wrote {out}")
 
 
+def _xcol(df):
+    """Return 'step' if present, else 'epoch'."""
+    return "step" if "step" in df.columns else "epoch"
+
+
 def plot_epoch_metric(all_data, graphs_dir, metric, ylabel, title, filename, scale=1.0):
     fig, ax = plt.subplots(figsize=(10, 6))
     seq_lengths = sorted(all_data.keys())
@@ -183,9 +188,10 @@ def plot_epoch_metric(all_data, graphs_dir, metric, ylabel, title, filename, sca
         df = all_data[seq]
         if metric not in df.columns:
             continue
-        ax.plot(df["epoch"], df[metric] * scale,
+        xc = _xcol(df)
+        ax.plot(df[xc], df[metric] * scale,
                 marker="o", markersize=3, color=color, label=f"seq={seq}")
-    ax.set_xlabel("Epoch")
+    ax.set_xlabel("Step")
     ax.set_ylabel(ylabel)
     ax.set_title(title)
     ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=8)
@@ -359,12 +365,13 @@ def plot_convergence(all_model_epochs, graphs_dir, metric, ylabel, title_prefix,
             if metric not in df.columns:
                 continue
             lw = 2.0 if model in BASELINES else 1.5
-            ax.plot(df["epoch"], df[metric] * scale,
+            xc = _xcol(df)
+            ax.plot(df[xc], df[metric] * scale,
                     marker=MODEL_MARKERS[model], markersize=3, linewidth=lw,
                     linestyle=MODEL_LINESTYLES[model],
                     color=MODEL_COLORS[model], label=MODEL_LABELS.get(model, model))
         ax.set_title(f"seq={seq}")
-        ax.set_xlabel("Epoch")
+        ax.set_xlabel("Step")
         ax.set_ylabel(ylabel)
         ax.grid(True, alpha=0.4)
         if idx == 0:

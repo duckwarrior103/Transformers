@@ -21,7 +21,7 @@ BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
 export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 
 # Configuration: baselines + GEAD with varying ELM projection sizes
-MODELS=(gdn_ek1 gdn_ek2 gdn_ek4 gead_elm64 gead_elm128 gead_elm256 gead_elm64_orth gead_elm128_orth gead_elm256_orth)
+MODELS=(gdn_hd64 gdn_hd128 gead_elm64 gead_elm128 gead_elm64_orth gead_elm128_orth)
 NUM_DATA_TOKENS=1024
 
 # Create a unique run directory based on the current date and time
@@ -42,7 +42,7 @@ declare -a FREE_GPUS=(0 1)
 declare -A PID_TO_GPU=()
 
 for MODEL in "${MODELS[@]}"; do
-    for SEQ in 8 16 32 64 128 256 512; do
+    for SEQ in 32 64 128 256 512 1024 2048; do
         # Block until there are fewer than 4 background processes running
         while [ ${#FREE_GPUS[@]} -eq 0 ]; do
             wait -n || true

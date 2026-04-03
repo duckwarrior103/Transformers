@@ -176,18 +176,18 @@ def get_gead_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2
     )
 
 
-def _make_gead_elm_config_fn(expand_k: float, elm_orthogonal: bool = False):
-    """Factory: GEAD with square W1. head_dim = elm_dim = hidden_size * expand_k / num_heads.
-    elm_orthogonal controls W1 init: False → randn, True → orthogonal blocks."""
-    head_dim = int(128 * expand_k / 2)  # 64, 128, or 256
-    elm_dim = head_dim                   # square W1
-    def get_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
+def _make_gead_elm_config_fn(head_dim: int, elm_orthogonal: bool = False,
+                              num_hidden_layers: int = 2, num_heads: int = 2):
+    """Factory: GEAD with square W1. hidden_size = num_heads * head_dim.
+    elm_dim = head_dim (square W1)."""
+    elm_dim = head_dim
+    hidden_size = num_heads * head_dim
+    def get_config(vocab_size, seq_length, _hidden_size=None, _num_layers=None, _num_heads=None, **_kwargs):
         return GEADConfig(
             vocab_size=vocab_size,
-            hidden_size=128,
-            intermediate_size=4 * 128,
-            num_hidden_layers=2,
-            num_heads=2,
+            hidden_size=hidden_size,
+            num_hidden_layers=num_hidden_layers,
+            num_heads=num_heads,
             head_dim=head_dim,
             max_position_embeddings=seq_length,
             pad_token_id=vocab_size - 1,
@@ -206,19 +206,27 @@ def _make_gead_elm_config_fn(expand_k: float, elm_orthogonal: bool = False):
     return get_config
 
 
-def _make_gdn_ek_config_fn(expand_k: float):
-    """Factory: GatedDeltaNet with explicit head_dim matching the paired GEAD ELM model.
-    head_dim = hidden_size * expand_k / num_heads = 128 * expand_k / 2 (mirrors GEAD formula)."""
-    head_dim = int(128 * expand_k / 2)  # 64, 128, or 256
-    def get_config(vocab_size, seq_length, hidden_size=128, num_hidden_layers=2, num_heads=2):
-        return get_gated_deltanet_config(
+def _make_gdn_ek_config_fn(head_dim: int,
+                            num_hidden_layers: int = 2, num_heads: int = 2):
+    """Factory: GatedDeltaNet. hidden_size = num_heads * head_dim."""
+    hidden_size = num_heads * head_dim
+    def get_config(vocab_size, seq_length, _hidden_size=None, _num_layers=None, _num_heads=None, **_kwargs):
+        return GatedDeltaNetConfig(
             vocab_size=vocab_size,
-            seq_length=seq_length,
-            hidden_size=128,
-            num_hidden_layers=2,
-            num_heads=2,
+            hidden_size=hidden_size,
+            num_hidden_layers=num_hidden_layers,
+            num_heads=num_heads,
             head_dim=head_dim,
-            expand_k=expand_k,
+            max_position_embeddings=seq_length,
+            pad_token_id=vocab_size - 1,
+            eos_token_id=vocab_size - 1,
+            attn_mode="chunk",
+            expand_v=1.0,
+            use_short_conv=True,
+            fuse_norm=True,
+            fuse_swiglu=True,
+            fuse_cross_entropy=True,
+            fuse_linear_cross_entropy=False,
         )
     return get_config
 
@@ -233,10 +241,10 @@ def get_models_creator_dict():
         "gated_deltanet": (get_gated_deltanet_config, GatedDeltaNetForCausalLM),
         "gead": (get_gead_config, GEADForCausalLM),
     }
-    for expand_k, suffix in [(1.0, "64"), (2.0, "128"), (4.0, "256")]:
-        d[f"gead_elm{suffix}"]      = (_make_gead_elm_config_fn(expand_k, elm_orthogonal=False), GEADForCausalLM)
-        d[f"gead_elm{suffix}_orth"] = (_make_gead_elm_config_fn(expand_k, elm_orthogonal=True),  GEADForCausalLM)
-        d[f"gdn_ek{int(expand_k)}"] = (_make_gdn_ek_config_fn(expand_k), GatedDeltaNetForCausalLM)
+    for head_dim in [64, 128, 256]:
+        d[f"gead_elm{head_dim}"]      = (_make_gead_elm_config_fn(head_dim, elm_orthogonal=False), GEADForCausalLM)
+        d[f"gead_elm{head_dim}_orth"] = (_make_gead_elm_config_fn(head_dim, elm_orthogonal=True),  GEADForCausalLM)
+        d[f"gdn_hd{head_dim}"]       = (_make_gdn_ek_config_fn(head_dim), GatedDeltaNetForCausalLM)
     return d
 
 

@@ -12,6 +12,7 @@ import time
 import csv
 import json
 import os
+import itertools
 from utilities.models_configs import get_models_creator_dict
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -25,7 +26,7 @@ parser.add_argument("--model_type", type=str, default="standard",
                     choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet",
                              "gead", "gead_elm64", "gead_elm128", "gead_elm256",
                              "gead_elm64_orth", "gead_elm128_orth", "gead_elm256_orth",
-                             "gdn_ek1", "gdn_ek2", "gdn_ek4"],
+                             "gdn_hd64", "gdn_hd128", "gdn_hd256"],
                     help="Type of model to train")
 parser.add_argument("--seq_length", type=int, default=64)
 parser.add_argument("--num_data_tokens", type=int, default=1024)
@@ -33,6 +34,10 @@ parser.add_argument("--train_examples", type=int, default=50000)
 parser.add_argument("--val_examples", type=int, default=20000)
 parser.add_argument("--batch_size", type=int, default=256)
 parser.add_argument("--epochs", type=int, default=8)
+parser.add_argument("--max_steps", type=int, default=None,
+                    help="If set, use step-based training for this many steps (overrides --epochs)")
+parser.add_argument("--eval_every", type=int, default=2000,
+                    help="Evaluate every N steps when using step-based training")
 parser.add_argument("--lr", type=float, default=3e-4)
 parser.add_argument("--weight_decay", type=float, default=0.01)
 parser.add_argument("--hidden_size", type=int, default=512)
@@ -57,6 +62,8 @@ TRAIN_EXAMPLES = args.train_examples
 VAL_EXAMPLES = args.val_examples
 BATCH_SIZE = args.batch_size
 EPOCHS = args.epochs
+MAX_STEPS = args.max_steps
+EVAL_EVERY = args.eval_every
 LEARNING_RATE = args.lr
 WEIGHT_DECAY = args.weight_decay
 
@@ -70,12 +77,12 @@ VOCAB_SIZE = NUM_DATA_TOKENS + 1         # data tokens + separator (no EOS)
 
 # Derived MQAR dimensions
 NUM_KV_PAIRS = SEQUENCE_LENGTH // 4
-NUM_QUERIES = NUM_KV_PAIRS // 2
+NUM_UNIQUE_PAIRS = min(NUM_KV_PAIRS, NUM_KEYS)  # unique associations; rest are duplicates
+NUM_QUERIES = min(NUM_KV_PAIRS // 2, NUM_UNIQUE_PAIRS)  # can only query unique keys
 TOTAL_TOKENS = 2 * NUM_KV_PAIRS + 1 + 2 * NUM_QUERIES  # actual sequence length
 
 assert NUM_KV_PAIRS > 0, f"seq_length={SEQUENCE_LENGTH} too small: need at least 4 for 1 KV pair"
 assert NUM_QUERIES > 0, f"seq_length={SEQUENCE_LENGTH} too small: need at least 8 for 1 query"
-assert NUM_KV_PAIRS <= NUM_KEYS, f"num_kv_pairs={NUM_KV_PAIRS} > num_keys={NUM_KEYS}: not enough unique keys"
 
 if args.target_params is not None:
     from utilities.models_configs import find_iso_hidden_size
@@ -110,6 +117,29 @@ def log_epoch(filepath, epoch, train_loss, val_loss, token_acc, exact_acc, epoch
         writer.writerow([
             epoch, MODEL_TYPE, f"{train_loss:.6f}", f"{val_loss:.6f}",
             f"{token_acc:.6f}", f"{exact_acc:.6f}", f"{epoch_time:.2f}",
+            SEQUENCE_LENGTH, NUM_DATA_TOKENS, TRAIN_EXAMPLES,
+            args.hidden_size, args.num_layers, args.num_heads,
+            LEARNING_RATE, BATCH_SIZE
+        ])
+
+def init_step_csv(filepath):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "step", "model_type", "train_loss", "val_loss", "token_acc", "exact_acc",
+            "step_time", "seq_length", "vocab_size", "train_examples",
+            "hidden_size", "num_layers", "num_heads", "lr", "batch_size"
+        ])
+
+def log_step(filepath, step, train_loss, val_loss, token_acc, exact_acc, step_time):
+    if not filepath:
+        return
+    with open(filepath, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            step, MODEL_TYPE, f"{train_loss:.6f}", f"{val_loss:.6f}",
+            f"{token_acc:.6f}", f"{exact_acc:.6f}", f"{step_time:.2f}",
             SEQUENCE_LENGTH, NUM_DATA_TOKENS, TRAIN_EXAMPLES,
             args.hidden_size, args.num_layers, args.num_heads,
             LEARNING_RATE, BATCH_SIZE
@@ -168,7 +198,10 @@ def save_config_json(filepath, args, num_params, num_frozen=0, num_buffers=0):
         json.dump(config, f, indent=2)
 
 if args.results_file:
-    init_csv(args.results_file)
+    if MAX_STEPS is not None:
+        init_step_csv(args.results_file)
+    else:
+        init_csv(args.results_file)
 
 class MQARDataset(Dataset):
     def __init__(self, num_examples, num_kv_pairs, num_queries, num_keys, num_values, sep_token):
@@ -184,14 +217,30 @@ class MQARDataset(Dataset):
         return self.num_examples
 
     def __getitem__(self, idx):
-        keys = torch.randperm(self.num_keys)[:self.num_kv_pairs]
-        values = torch.randint(self.num_keys, self.num_keys + self.num_values, (self.num_kv_pairs,))
+        # Generate unique key-value associations
+        num_unique = min(self.num_kv_pairs, self.num_keys)
+        unique_keys = torch.randperm(self.num_keys)[:num_unique]
+        unique_values = torch.randint(self.num_keys, self.num_keys + self.num_values, (num_unique,))
+
+        # Fill remaining slots with duplicate pairs (same key, same value)
+        if self.num_kv_pairs > num_unique:
+            dup_indices = torch.randint(0, num_unique, (self.num_kv_pairs - num_unique,))
+            keys = torch.cat([unique_keys, unique_keys[dup_indices]])
+            values = torch.cat([unique_values, unique_values[dup_indices]])
+            # Shuffle so duplicates are interspersed
+            perm = torch.randperm(self.num_kv_pairs)
+            keys = keys[perm]
+            values = values[perm]
+        else:
+            keys = unique_keys
+            values = unique_values
 
         kv_block = torch.stack([keys, values], dim=1).reshape(-1)
 
-        query_indices = torch.randperm(self.num_kv_pairs)[:self.num_queries]
-        query_keys = keys[query_indices]
-        query_values = values[query_indices]
+        # Queries drawn from the unique associations only
+        query_indices = torch.randperm(num_unique)[:self.num_queries]
+        query_keys = unique_keys[query_indices]
+        query_values = unique_values[query_indices]
 
         qa_block = torch.stack([query_keys, query_values], dim=1).reshape(-1)
 
@@ -227,7 +276,7 @@ if args.results_file:
     save_config_json(args.results_file.replace(".csv", "_config.json"), args, num_params, num_frozen, num_buffers)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-total_steps = len(train_loader) * EPOCHS
+total_steps = MAX_STEPS if MAX_STEPS is not None else len(train_loader) * EPOCHS
 warmup_steps = int(0.05 * total_steps)
 scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
 
@@ -283,22 +332,58 @@ def evaluate():
 best_accuracy = 0
 start_time = time.time()
 
-for epoch in range(EPOCHS):
-    epoch_start = time.time()
-    print(f"\nEpoch {epoch+1}/{EPOCHS}")
-    train_loss = train_epoch()
-    val_loss, val_seq_acc, val_token_acc = evaluate()
-    epoch_time = time.time() - epoch_start
+if MAX_STEPS is not None:
+    step = 0
+    step_loss_acc = 0.0
+    steps_since_ckpt = 0
+    checkpoint_start = time.time()
+    train_iter = itertools.cycle(train_loader)
+    while step < MAX_STEPS:
+        input_ids, labels = next(train_iter)
+        input_ids = input_ids.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+        model.train()
+        optimizer.zero_grad()
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            outputs = model(input_ids=input_ids, labels=labels)
+            loss = outputs.loss
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+        step_loss_acc += loss.item()
+        step += 1
+        steps_since_ckpt += 1
 
-    print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, "
-          f"Val Exact Acc: {val_seq_acc*100:.2f}%, Val Token Acc: {val_token_acc*100:.2f}%, "
-          f"Epoch Time: {epoch_time:.2f}s")
+        if step % EVAL_EVERY == 0 or step == MAX_STEPS:
+            avg_train_loss = step_loss_acc / steps_since_ckpt
+            step_loss_acc = 0.0
+            steps_since_ckpt = 0
+            val_loss, val_seq_acc, val_token_acc = evaluate()
+            step_time = time.time() - checkpoint_start
+            checkpoint_start = time.time()
+            print(f"Step {step}/{MAX_STEPS}: train_loss={avg_train_loss:.4f}, val_loss={val_loss:.4f}, "
+                  f"token_acc={val_token_acc*100:.2f}%, exact_acc={val_seq_acc*100:.2f}%, time={step_time:.1f}s")
+            log_step(args.results_file, step, avg_train_loss, val_loss, val_token_acc, val_seq_acc, step_time)
+            if val_seq_acc > best_accuracy:
+                best_accuracy = val_seq_acc
+else:
+    for epoch in range(EPOCHS):
+        epoch_start = time.time()
+        print(f"\nEpoch {epoch+1}/{EPOCHS}")
+        train_loss = train_epoch()
+        val_loss, val_seq_acc, val_token_acc = evaluate()
+        epoch_time = time.time() - epoch_start
 
-    log_epoch(args.results_file, epoch + 1, train_loss, val_loss, val_token_acc, val_seq_acc, epoch_time)
+        print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, "
+              f"Val Exact Acc: {val_seq_acc*100:.2f}%, Val Token Acc: {val_token_acc*100:.2f}%, "
+              f"Epoch Time: {epoch_time:.2f}s")
 
-    if val_seq_acc > best_accuracy:
-        best_accuracy = val_seq_acc
-        print("✓ New best model.")
+        log_epoch(args.results_file, epoch + 1, train_loss, val_loss, val_token_acc, val_seq_acc, epoch_time)
+
+        if val_seq_acc > best_accuracy:
+            best_accuracy = val_seq_acc
+            print("✓ New best model.")
 
 total_time = time.time() - start_time
 print(f"\nTotal Training Time: {total_time:.2f}s")
@@ -327,13 +412,24 @@ for start in tqdm(range(0, TEST_EXAMPLES, TEST_BATCH_SIZE), desc="Testing (gener
     batch_query_values = []
 
     for _ in range(batch_size):
-        keys = torch.randperm(NUM_KEYS)[:NUM_KV_PAIRS]
-        values = torch.randint(NUM_KEYS, NUM_KEYS + NUM_VALUES, (NUM_KV_PAIRS,))
-        query_indices = torch.randperm(NUM_KV_PAIRS)[:NUM_QUERIES]
+        num_unique = min(NUM_KV_PAIRS, NUM_KEYS)
+        unique_keys = torch.randperm(NUM_KEYS)[:num_unique]
+        unique_values = torch.randint(NUM_KEYS, NUM_KEYS + NUM_VALUES, (num_unique,))
+        if NUM_KV_PAIRS > num_unique:
+            dup_indices = torch.randint(0, num_unique, (NUM_KV_PAIRS - num_unique,))
+            keys = torch.cat([unique_keys, unique_keys[dup_indices]])
+            values = torch.cat([unique_values, unique_values[dup_indices]])
+            perm = torch.randperm(NUM_KV_PAIRS)
+            keys = keys[perm]
+            values = values[perm]
+        else:
+            keys = unique_keys
+            values = unique_values
+        query_indices = torch.randperm(num_unique)[:NUM_QUERIES]
         batch_keys.append(keys)
         batch_values.append(values)
-        batch_query_keys.append(keys[query_indices])
-        batch_query_values.append(values[query_indices])
+        batch_query_keys.append(unique_keys[query_indices])
+        batch_query_values.append(unique_values[query_indices])
 
     prompts = []
     for i in range(batch_size):

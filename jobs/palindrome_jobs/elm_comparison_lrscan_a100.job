@@ -18,8 +18,8 @@ source /mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers/.venv/b
 BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
 export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 
-MODELS=(gdn_ek1 gdn_ek2 gdn_ek4 gead_elm64 gead_elm128 gead_elm256 gead_elm64_orth gead_elm128_orth gead_elm256_orth)
-LRS=(0.003 0.001 0.0003 0.0001)
+MODELS=(gdn_hd64 gdn_hd128 gead_elm64 gead_elm128 gead_elm64_orth gead_elm128_orth)
+LRS=(0.001 0.0005 0.0001 0.00005)
 NUM_DATA_TOKENS=16
 
 RUN_ID="run_$(date +%Y-%m-%d_%H-%M-%S)"
@@ -39,7 +39,7 @@ declare -A PID_TO_GPU=()
 
 for MODEL in "${MODELS[@]}"; do
     for LR in "${LRS[@]}"; do
-        for SEQ in 2 4 8 16 32 64 128 256 512; do
+        for SEQ in 32 64 128 256 512 1024 2048; do
             while [ ${#FREE_GPUS[@]} -eq 0 ]; do
                 wait -n || true
                 new_running_pids=()
@@ -67,7 +67,8 @@ for MODEL in "${MODELS[@]}"; do
                 --train_examples 50000 \
                 --val_examples 5000 \
                 --batch_size 256 \
-                --epochs 8 \
+                --max_steps 20000 \
+                --eval_every 2000 \
                 --lr $LR \
                 --hidden_size 128 \
                 --num_layers 2 \
@@ -105,5 +106,5 @@ for LR in "${LRS[@]}"; do
 done
 
 echo "Plotting LR scan graphs"
-python -u "$BASE/results/palindrome_jobs/elm_comparison/plot_lrscan.py" "$RUN_DIR"
+python -u "$BASE/results/palindrome_jobs/elm_comparison_lrscan/plot_lrscan.py" "$RUN_DIR"
 echo "Finished"

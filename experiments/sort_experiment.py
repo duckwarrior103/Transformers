@@ -11,6 +11,7 @@ import time
 import csv
 import json
 import os
+import itertools
 from utilities.models_configs import get_models_creator_dict
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -24,7 +25,7 @@ parser.add_argument("--model_type", type=str, default="standard",
                     choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet",
                              "gead", "gead_elm64", "gead_elm128", "gead_elm256",
                              "gead_elm64_orth", "gead_elm128_orth", "gead_elm256_orth",
-                             "gdn_ek1", "gdn_ek2", "gdn_ek4"],
+                             "gdn_hd64", "gdn_hd128", "gdn_hd256"],
                     help="Type of model to train")
 parser.add_argument("--seq_length", type=int, default=256)
 parser.add_argument("--num_data_tokens", type=int, default=64)
@@ -32,6 +33,10 @@ parser.add_argument("--train_examples", type=int, default=50000)
 parser.add_argument("--val_examples", type=int, default=20000)
 parser.add_argument("--batch_size", type=int, default=256)
 parser.add_argument("--epochs", type=int, default=8)
+parser.add_argument("--max_steps", type=int, default=None,
+                    help="If set, use step-based training for this many steps (overrides --epochs)")
+parser.add_argument("--eval_every", type=int, default=2000,
+                    help="Evaluate every N steps when using step-based training")
 parser.add_argument("--lr", type=float, default=3e-4)
 parser.add_argument("--weight_decay", type=float, default=0.01)
 parser.add_argument("--hidden_size", type=int, default=512)
@@ -56,6 +61,8 @@ TRAIN_EXAMPLES = args.train_examples
 VAL_EXAMPLES = args.val_examples
 BATCH_SIZE = args.batch_size
 EPOCHS = args.epochs
+MAX_STEPS = args.max_steps
+EVAL_EVERY = args.eval_every
 LEARNING_RATE = args.lr
 WEIGHT_DECAY = args.weight_decay
 
@@ -102,6 +109,29 @@ def log_epoch(filepath, epoch, train_loss, val_loss, token_acc, exact_acc, epoch
             LEARNING_RATE, BATCH_SIZE
         ])
 
+def init_step_csv(filepath):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "step", "model_type", "train_loss", "val_loss", "token_acc", "exact_acc",
+            "step_time", "seq_length", "vocab_size", "train_examples",
+            "hidden_size", "num_layers", "num_heads", "lr", "batch_size"
+        ])
+
+def log_step(filepath, step, train_loss, val_loss, token_acc, exact_acc, step_time):
+    if not filepath:
+        return
+    with open(filepath, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            step, MODEL_TYPE, f"{train_loss:.6f}", f"{val_loss:.6f}",
+            f"{token_acc:.6f}", f"{exact_acc:.6f}", f"{step_time:.2f}",
+            SEQUENCE_LENGTH, NUM_DATA_TOKENS, TRAIN_EXAMPLES,
+            args.hidden_size, args.num_layers, args.num_heads,
+            LEARNING_RATE, BATCH_SIZE
+        ])
+
 def log_test_results(filepath, gen_token_acc, gen_exact_acc):
     if not filepath:
         return
@@ -110,7 +140,7 @@ def log_test_results(filepath, gen_token_acc, gen_exact_acc):
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow([
-                "model_type", "seq_length", "num_data_tokens", "final_token_acc", "final_exact_acc", 
+                "model_type", "seq_length", "num_data_tokens", "final_token_acc", "final_exact_acc",
                 "hidden_size", "num_layers", "num_heads"
             ])
         writer.writerow([
@@ -152,7 +182,10 @@ def save_config_json(filepath, args, num_params, num_frozen=0, num_buffers=0):
         json.dump(config, f, indent=2)
 
 if args.results_file:
-    init_csv(args.results_file)
+    if MAX_STEPS is not None:
+        init_step_csv(args.results_file)
+    else:
+        init_csv(args.results_file)
 
 class SortingDataset(Dataset):
     def __init__(self, num_examples, seq_length, num_data_tokens):
@@ -198,7 +231,7 @@ if args.results_file:
     save_config_json(args.results_file.replace(".csv", "_config.json"), args, num_params, num_frozen, num_buffers)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-total_steps = len(train_loader) * EPOCHS
+total_steps = MAX_STEPS if MAX_STEPS is not None else len(train_loader) * EPOCHS
 warmup_steps = int(0.05 * total_steps)
 scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
 
@@ -252,22 +285,58 @@ def evaluate():
 best_accuracy = 0
 start_time = time.time()
 
-for epoch in range(EPOCHS):
-    epoch_start = time.time()
-    print(f"\nEpoch {epoch+1}/{EPOCHS}")
-    train_loss = train_epoch()
-    val_loss, val_seq_acc, val_token_acc = evaluate()
-    epoch_time = time.time() - epoch_start
+if MAX_STEPS is not None:
+    step = 0
+    step_loss_acc = 0.0
+    steps_since_ckpt = 0
+    checkpoint_start = time.time()
+    train_iter = itertools.cycle(train_loader)
+    while step < MAX_STEPS:
+        input_ids, labels = next(train_iter)
+        input_ids = input_ids.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+        model.train()
+        optimizer.zero_grad()
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            outputs = model(input_ids=input_ids, labels=labels)
+            loss = outputs.loss
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+        step_loss_acc += loss.item()
+        step += 1
+        steps_since_ckpt += 1
 
-    print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, "
-          f"Val Exact Acc: {val_seq_acc*100:.2f}%, Val Token Acc: {val_token_acc*100:.2f}%, "
-          f"Epoch Time: {epoch_time:.2f}s")
+        if step % EVAL_EVERY == 0 or step == MAX_STEPS:
+            avg_train_loss = step_loss_acc / steps_since_ckpt
+            step_loss_acc = 0.0
+            steps_since_ckpt = 0
+            val_loss, val_seq_acc, val_token_acc = evaluate()
+            step_time = time.time() - checkpoint_start
+            checkpoint_start = time.time()
+            print(f"Step {step}/{MAX_STEPS}: train_loss={avg_train_loss:.4f}, val_loss={val_loss:.4f}, "
+                  f"token_acc={val_token_acc*100:.2f}%, exact_acc={val_seq_acc*100:.2f}%, time={step_time:.1f}s")
+            log_step(args.results_file, step, avg_train_loss, val_loss, val_token_acc, val_seq_acc, step_time)
+            if val_seq_acc > best_accuracy:
+                best_accuracy = val_seq_acc
+else:
+    for epoch in range(EPOCHS):
+        epoch_start = time.time()
+        print(f"\nEpoch {epoch+1}/{EPOCHS}")
+        train_loss = train_epoch()
+        val_loss, val_seq_acc, val_token_acc = evaluate()
+        epoch_time = time.time() - epoch_start
 
-    log_epoch(args.results_file, epoch + 1, train_loss, val_loss, val_token_acc, val_seq_acc, epoch_time)
+        print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, "
+              f"Val Exact Acc: {val_seq_acc*100:.2f}%, Val Token Acc: {val_token_acc*100:.2f}%, "
+              f"Epoch Time: {epoch_time:.2f}s")
 
-    if val_seq_acc > best_accuracy:
-        best_accuracy = val_seq_acc
-        print("✓ New best model.")
+        log_epoch(args.results_file, epoch + 1, train_loss, val_loss, val_token_acc, val_seq_acc, epoch_time)
+
+        if val_seq_acc > best_accuracy:
+            best_accuracy = val_seq_acc
+            print("✓ New best model.")
 
 total_time = time.time() - start_time
 print(f"\nTotal Training Time: {total_time:.2f}s")

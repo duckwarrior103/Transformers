@@ -21,8 +21,8 @@ BASE="/mnt/iusers01/fse-ugpgt01/compsci01/j84846ky/scratch/Transformers"
 export PYTHONPATH="$BASE/.venv/lib/python3.12/site-packages:$BASE:$PYTHONPATH"
 
 # Configuration
-MODEL="standard"
-NUM_DATA_TOKENS=1024
+MODEL="gated_deltanet"
+NUM_DATA_TOKENS=512
 
 # Create a unique run directory based on the current date and time
 RUN_ID="run_$(date +%Y-%m-%d_%H-%M-%S)"
@@ -39,7 +39,7 @@ declare -a RUNNING_PIDS=()
 declare -a FREE_GPUS=(0 1 2 3)
 declare -A PID_TO_GPU=()
 
-for SEQ in 8 16 32 64 128 256 512; do
+for SEQ in 8 16 32 64 128 256 512 1024; do
     # Block until there are fewer than 4 background processes running
     while [ ${#FREE_GPUS[@]} -eq 0 ]; do
         wait -n || true
@@ -76,7 +76,7 @@ for SEQ in 8 16 32 64 128 256 512; do
         --batch_size 256 \
         --epochs 8 \
         --lr 0.0003 \
-        --hidden_size 128 \
+        --hidden_size 256 \
         --num_layers 2 \
         --num_heads 2 \
         --test_results_file "$RUN_DIR/data/test_results_seq_${SEQ}.csv" \
