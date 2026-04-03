@@ -25,7 +25,7 @@ from matplotlib.colors import Normalize
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODELS = ["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet"]
+MODELS = ["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet", "gead"]
 
 MODEL_COLORS = {
     "standard": "#1f77b4",
@@ -34,6 +34,7 @@ MODEL_COLORS = {
     "retnet": "#d62728",
     "deltanet": "#9467bd",
     "gated_deltanet": "#8c564b",
+    "gead": "#e377c2",
 }
 
 

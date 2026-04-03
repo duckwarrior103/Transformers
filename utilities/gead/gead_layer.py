@@ -43,7 +43,8 @@ class GEADLayer(nn.Module):
     are replaced with:
         h_t = ℓ₂-norm(tanh(W₁ k_t))
         q̃_t = ℓ₂-norm(tanh(W₁ q_t))
-    where W₁ is a frozen orthogonal matrix (registered as a buffer).
+    where W₁ is a frozen random matrix (registered as a buffer).
+    Initialisation is controlled by elm_orthogonal: False → torch.randn, True → orthogonal.
 
     Similar to Mamba2, each layer contains around 6*hidden_size*hidden_size parameters.
 
@@ -100,6 +101,7 @@ class GEADLayer(nn.Module):
         norm_eps: float = 1e-5,
         use_elm: bool = True,
         elm_dim: int = None,
+        elm_orthogonal: bool = False,
         **kwargs,
     ) -> GEADLayer:
         super().__init__()
@@ -200,9 +202,24 @@ class GEADLayer(nn.Module):
         self.elm_dim = elm_dim or self.head_k_dim
         if use_elm:
             W1 = torch.empty(self.num_heads, self.elm_dim, self.head_k_dim)
-            for h in range(self.num_heads):
-                nn.init.orthogonal_(W1[h])
+            if elm_orthogonal:
+                for h in range(self.num_heads):
+                    if self.elm_dim <= self.head_k_dim:
+                        nn.init.orthogonal_(W1[h])
+                    else:
+                        blocks = math.ceil(self.elm_dim / self.head_k_dim)
+                        rows = []
+                        for _ in range(blocks):
+                            Q = torch.empty(self.head_k_dim, self.head_k_dim)
+                            nn.init.orthogonal_(Q)
+                            rows.append(Q)
+                        W1[h] = F.normalize(
+                            torch.cat(rows, dim=0)[:self.elm_dim], p=2, dim=-1
+                        )
+            else:
+                nn.init.normal_(W1)
             self.register_buffer('elm_proj', W1)
+            # No self.w2 — the kernel state S_t ∈ ℝ^(dv × elm_dim) IS W2
 
     def forward(
         self,
@@ -267,7 +284,8 @@ class GEADLayer(nn.Module):
             q, k = map(lambda x: repeat(x, '... h d -> ... (h g) d', g=self.num_v_heads // self.num_heads), (q, k))
 
         if self.use_elm:
-            # q, k: [B, T, H, K] ; elm_proj: [H, m, K]
+            # q, k: [B, T, H, head_k_dim] → [B, T, H, elm_dim]
+            # elm_proj: [H, elm_dim, head_k_dim] — frozen random basis; kernel state IS W2
             dtype = k.dtype
             k = F.normalize(torch.tanh(torch.einsum('bthk,hmk->bthm', k, self.elm_proj)), dim=-1).to(dtype)
             q = F.normalize(torch.tanh(torch.einsum('bthk,hmk->bthm', q, self.elm_proj)), dim=-1).to(dtype)

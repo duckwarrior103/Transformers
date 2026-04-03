@@ -73,6 +73,7 @@ class GEADBlock(GradientCheckpointingLayer):
                 layer_idx=layer_idx,
                 use_elm=config.use_elm,
                 elm_dim=config.elm_dim,
+                elm_orthogonal=config.elm_orthogonal,
             )
         self.mlp_norm = (RMSNorm if config.fuse_norm else nn.RMSNorm)(config.hidden_size, eps=config.norm_eps)
         self.mlp = GEADMLP(

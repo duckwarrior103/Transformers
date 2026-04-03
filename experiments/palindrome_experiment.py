@@ -9,6 +9,7 @@ import random
 import argparse
 import time
 import csv
+import json
 import os
 from utilities.models_configs import get_models_creator_dict
 
@@ -19,7 +20,12 @@ if torch.cuda.is_available():
 print()
 
 parser = argparse.ArgumentParser(description="Train a transformer for palindrome (reverse) task.")
-parser.add_argument("--model_type", type=str, default="standard", choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet", "gead"], help="Type of model to train")
+parser.add_argument("--model_type", type=str, default="standard",
+                    choices=["standard", "linear_attention", "gla", "retnet", "deltanet", "gated_deltanet",
+                             "gead", "gead_elm64", "gead_elm128", "gead_elm256",
+                             "gead_elm64_orth", "gead_elm128_orth", "gead_elm256_orth",
+                             "gdn_ek1", "gdn_ek2", "gdn_ek4"],
+                    help="Type of model to train")
 parser.add_argument("--seq_length", type=int, default=256)
 parser.add_argument("--num_data_tokens", type=int, default=64)
 parser.add_argument("--train_examples", type=int, default=50000)
@@ -31,9 +37,15 @@ parser.add_argument("--weight_decay", type=float, default=0.01)
 parser.add_argument("--hidden_size", type=int, default=512)
 parser.add_argument("--num_layers", type=int, default=6)
 parser.add_argument("--num_heads", type=int, default=8)
+parser.add_argument("--target_params", type=int, default=None,
+                    help="If set, override hidden_size so trainable params <= this value (iso-param mode)")
 parser.add_argument("--test_results_file", type=str, default="", help="Path to CSV file for logging final test results")
 parser.add_argument("--results_file", type=str, default="", help="Path to CSV file for logging per-epoch results")
+parser.add_argument("--seed", type=int, default=42)
 args = parser.parse_args()
+
+random.seed(args.seed)
+torch.manual_seed(args.seed)
 
 MODEL_TYPE = args.model_type
 NUM_LAYERS = args.num_layers
@@ -53,6 +65,14 @@ NUM_DATA_TOKENS = args.num_data_tokens # e.g. 64 means integers in range 0-63, 6
 SEP_TOKEN = NUM_DATA_TOKENS # 0-63 for data, 64 for separator, 65 for EOS
 EOS_TOKEN = NUM_DATA_TOKENS + 1
 VOCAB_SIZE = NUM_DATA_TOKENS + 2 # data tokens + separator + EOS
+
+if args.target_params is not None:
+    from utilities.models_configs import find_iso_hidden_size
+    args.hidden_size = find_iso_hidden_size(
+        args.model_type, args.target_params, VOCAB_SIZE,
+        2 * SEQUENCE_LENGTH + 2, args.num_layers, args.num_heads,
+    )
+    HIDDEN_SIZE = args.hidden_size
 
 print(f"Task: Reversing {SEQUENCE_LENGTH} integers in range [0, {NUM_DATA_TOKENS-1}])"
       f"Config: seq_length={SEQUENCE_LENGTH}, vocab_size={VOCAB_SIZE}, "
@@ -98,6 +118,39 @@ def log_test_results(filepath, gen_token_acc, gen_exact_acc):
             args.hidden_size, args.num_layers, args.num_heads
         ])
 
+def save_config_json(filepath, args, num_params, num_frozen=0, num_buffers=0):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    config = {
+        "model_type": args.model_type,
+        "model": {
+            "hidden_size": args.hidden_size,
+            "intermediate_size": 4 * args.hidden_size,
+            "num_layers": args.num_layers,
+            "num_heads": args.num_heads,
+            "trainable_params": num_params,
+            "frozen_params": num_frozen,
+            "buffer_params": num_buffers,
+        },
+        "task": {
+            "name": "palindrome",
+            "seq_length": args.seq_length,
+            "num_data_tokens": args.num_data_tokens,
+            "vocab_size": VOCAB_SIZE,
+            "train_examples": args.train_examples,
+            "val_examples": args.val_examples,
+        },
+        "training": {
+            "epochs": args.epochs,
+            "batch_size": args.batch_size,
+            "lr": args.lr,
+            "weight_decay": args.weight_decay,
+        },
+    }
+    if args.target_params is not None:
+        config["model"]["target_params"] = args.target_params
+    with open(filepath, "w") as f:
+        json.dump(config, f, indent=2)
+
 if args.results_file:
     init_csv(args.results_file)
 
@@ -139,7 +192,12 @@ model = model.to(device=device, dtype=torch.bfloat16)
 model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
 num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-print(f"Model parameters: {num_params:,}")
+num_frozen = sum(p.numel() for p in model.parameters() if not p.requires_grad)
+num_buffers = sum(b.numel() for b in model.buffers())
+print(f"Model parameters: {num_params:,} trainable | {num_frozen:,} frozen | {num_buffers:,} buffers")
+
+if args.results_file:
+    save_config_json(args.results_file.replace(".csv", "_config.json"), args, num_params, num_frozen, num_buffers)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 total_steps = len(train_loader) * EPOCHS

@@ -42,6 +42,7 @@ class GEADConfig(PretrainedConfig):
         # GEAD-specific
         use_elm: bool = True,
         elm_dim: int | None = None,
+        elm_orthogonal: bool = False,
         **kwargs,
     ):
         self.attn_mode = attn_mode
@@ -75,6 +76,7 @@ class GEADConfig(PretrainedConfig):
         # GEAD-specific
         self.use_elm = use_elm
         self.elm_dim = elm_dim  # defaults to head_dim in the layer if None
+        self.elm_orthogonal = elm_orthogonal
 
         if fuse_cross_entropy and fuse_linear_cross_entropy:
             raise ValueError(

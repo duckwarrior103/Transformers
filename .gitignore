@@ -50,4 +50,5 @@ saved_models/
 *.png
 *.csv
 *.log
+*.json
 
